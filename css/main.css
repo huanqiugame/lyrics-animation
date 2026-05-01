@@ -1,0 +1,103 @@
+/* 全局 CSS 变量 */
+:root {
+	--bg: #1a1a2e;
+	--bg-secondary: #16213e;
+	--bg-tertiary: #0f3460;
+	--text: #e0e0e0;
+	--text-secondary: #8899aa;
+	--accent: #18a058;
+	--accent-hover: #1fcb6e;
+	--danger: #e74c3c;
+	--border: #2a2a4a;
+	--radius: 8px;
+	--font-mono: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+	--font-sans: 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+}
+
+/* Reset */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html, body {
+	height: 100%;
+	overflow: hidden;
+}
+
+body {
+	font-family: var(--font-sans);
+	background: var(--bg);
+	color: var(--text);
+	line-height: 1.5;
+}
+
+/* 通用按钮 */
+button, .btn {
+	padding: 8px 16px;
+	border: 1px solid var(--border);
+	background: var(--bg-secondary);
+	color: var(--text);
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-family: inherit;
+	transition: all 0.15s ease;
+	white-space: nowrap;
+}
+button:hover {
+	border-color: var(--accent);
+	background: #1a3a2a;
+}
+button:active { opacity: 0.85; }
+button.primary {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: #fff;
+}
+button.primary:hover {
+	background: var(--accent-hover);
+}
+button:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* 通用输入 */
+input, select, textarea {
+	padding: 6px 10px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+	color: var(--text);
+	border-radius: 4px;
+	font-size: 0.875rem;
+	font-family: inherit;
+	outline: none;
+}
+input:focus, select:focus, textarea:focus {
+	border-color: var(--accent);
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: var(--border);
+	border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: var(--text-secondary);
+}
+
+/* 工具提示 */
+[title] {
+	position: relative;
+}

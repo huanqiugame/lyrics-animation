@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# 大型媒体文件
+*.mp3
+*.wav
+*.mp4
+*.mov
+
+# 生成的输出
+test/roundtrip-output.ttml
+*-output.ttml
+
+# AI 工具本地配置
+.claude/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
