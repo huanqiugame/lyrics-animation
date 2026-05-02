@@ -135,8 +135,39 @@ wc -l js/**/*.js css/*.css index.html
 ## Git 规范
 
 - **每个 Phase 完成后进行一次 git commit**，在测试通过后提交
-- commit message 格式：`Phase N: 简短描述`
+- commit message 格式：`Phase N: 简短描述`，可通过`git log`查看过去提交示例。
 - 不在 commit 中包含大型二进制文件（音频、视频），已通过 `.gitignore` 排除
+
+## 已知限制与待办
+
+### 待修复
+
+- **`<input type="range">` 滑块不到头**：进度条和音量条的滑块在 0% 和 100% 位置无法完全到达端点。这是浏览器对 range input 的默认行为（thumb 有宽度但 track 没有预留边距）。需要自定义 `::-webkit-slider-thumb` / `::-moz-range-thumb` 的 margin 或改用自定义 range 组件。等待后期统一调整样式时修复。
+
+### 待支持（TTML 扩展格式）
+
+当前 `test/Helping Hands.ttml` 只覆盖了基本歌词结构。以下 AMLL TTML 特性尚未支持，需要用户提供包含这些特性的示例文件后实现：
+
+- **背景歌词**（Background vocals）：与主唱区分开的伴唱/和声行
+- **空拍数量**（Rest/duration gaps）：单词之间无演唱的时间间隔
+- **逐词音译**（Per-word romanization）：每个单词的读音标注（不仅是整行 `x-roman`）
+- **不雅用语标识**（Explicit/profanity flag）：单词级别的内容标记
+
+### 已知技术限制
+
+- **Node.js v24 无 DOMParser**：Node 24 不提供 `DOMParser`、`XMLSerializer`、`Document` 等浏览器 DOM API。`--experimental-document` 标志不存在于 Node 24 中。因此 parser.js / writer.js 无法在 Node 环境测试，只能在浏览器中通过 dev server 手动验证。Node 可用于测试：events.js、time.js、types.js、dom.js（仅导出验证）。
+- **Node 路径**：`/Users/huanqiu/.nvm/versions/node/v24.15.0/bin/node`（通过 nvm 管理）
+
+### 测试方式
+
+```bash
+# Node 可测试部分（不含 DOMParser）
+/Users/huanqiu/.nvm/versions/node/v24.15.0/bin/node --input-type=module -e "..."
+
+# 完整测试需要浏览器
+python3 -m http.server 8080
+open http://localhost:8080
+```
 
 ## 关联项目
 
@@ -146,7 +177,7 @@ wc -l js/**/*.js css/*.css index.html
 
 - [x] 项目分析完成：决定从零开发（amll-ttml-tool 代码高度耦合 React，不可复用）
 - [x] Phase 1: TTML 解析器 + 数据模型
-- [ ] Phase 2: 基础 UI 外壳 + 文件 IO
+- [x] Phase 2: 基础 UI 外壳 + 文件 IO
 - [ ] Phase 3: 音频引擎
 - [ ] Phase 4: 动画渲染引擎 + 预览
 - [ ] Phase 5: 动画参数控制面板
