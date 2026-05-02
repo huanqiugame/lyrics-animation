@@ -49,7 +49,7 @@ app.js（协调层）
 
 ```bash
 npm install          # 安装测试依赖（jsdom，运行时不需要）
-npm test             # 运行 test/roundtrip-v2.mjs（3 份 TTML 文件双向转换验证）
+npm test             # 运行 roundtrip-v2.mjs + phase3-audio.mjs（107 项断言）
 node --check js/ttml/parser.js  # 语法检查
 python3 -m http.server 8080     # 启动开发服务器
 ```
@@ -76,7 +76,7 @@ Node 路径：`/Users/huanqiu/.nvm/versions/node/v24.15.0/bin/node`（nvm 管理
 - [x] Phase 1: TTML 解析器 + 数据模型
 - [x] Phase 2: 基础 UI 外壳 + 文件 IO + 事件总线
 - [x] Phase 2b: TTML 标准扩展格式支持（多 agent/背景人声/styling/region/div）
-- [ ] Phase 3: 音频引擎
+- [x] Phase 3: 音频引擎
 - [ ] Phase 4: 动画渲染引擎 + 预览
 - [ ] Phase 5: 动画参数控制面板
 - [ ] Phase 6: 逐词样式覆盖 + 导出

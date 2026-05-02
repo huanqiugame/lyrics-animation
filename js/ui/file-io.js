@@ -21,7 +21,7 @@ export function initFileIO(toolbarLeft, statusBar) {
 	// ---- 隐藏的 file input ----
 	const fileInput = document.createElement("input");
 	fileInput.type = "file";
-	fileInput.accept = ".ttml,.xml";
+	fileInput.accept = ".ttml,.xml,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.webm";
 	fileInput.style.display = "none";
 	document.body.appendChild(fileInput);
 
@@ -31,6 +31,12 @@ export function initFileIO(toolbarLeft, statusBar) {
 	btnImport.className = "primary";
 	btnImport.textContent = "导入 TTML";
 	btnImport.addEventListener("click", () => fileInput.click());
+
+	// ---- 导入音频按钮 ----
+	const btnImportAudio = document.createElement("button");
+	btnImportAudio.id = "btn-import-audio";
+	btnImportAudio.textContent = "导入音频";
+	btnImportAudio.addEventListener("click", () => fileInput.click());
 
 	// ---- 导出按钮 ----
 	const btnExport = document.createElement("button");
@@ -48,6 +54,7 @@ export function initFileIO(toolbarLeft, statusBar) {
 	});
 
 	toolbarLeft.appendChild(btnImport);
+	toolbarLeft.appendChild(btnImportAudio);
 	toolbarLeft.appendChild(btnExport);
 
 	// ---- 文件选择 ----
@@ -59,7 +66,7 @@ export function initFileIO(toolbarLeft, statusBar) {
 	let dragCounter = 0;
 	const dropOverlay = document.createElement("div");
 	dropOverlay.id = "drop-overlay";
-	dropOverlay.textContent = "松开以导入 TTML 文件";
+	dropOverlay.textContent = "松开以导入文件（TTML / 音频）";
 	document.body.appendChild(dropOverlay);
 
 	document.addEventListener("dragover", (e) => {
@@ -104,10 +111,19 @@ export function initFileIO(toolbarLeft, statusBar) {
 		statusBar.textContent = msg;
 	}
 
+	const AUDIO_EXTS = /\.(mp3|wav|ogg|flac|m4a|aac|opus|webm)$/i;
+
 	// ---- 文件处理 ----
 	function handleFile(file) {
+		// 音频文件：发送事件到音频引擎
+		if (AUDIO_EXTS.test(file.name)) {
+			setStatus(`正在加载音频: ${file.name}...`);
+			bus.emit("file:audio", { file });
+			return;
+		}
+
 		if (!file.name.endsWith(".ttml") && !file.name.endsWith(".xml")) {
-			setStatus("不支持的文件格式，请选择 .ttml 文件");
+			setStatus("不支持的文件格式，请选择 .ttml 或音频文件");
 			return;
 		}
 		setStatus(`正在解析: ${file.name}...`);
