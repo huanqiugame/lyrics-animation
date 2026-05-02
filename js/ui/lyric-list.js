@@ -58,6 +58,7 @@ export function initLyricList(container) {
 		// 元数据标签
 		const tags = [];
 		if (line.isDuet) tags.push(h("span", { className: "tag duet" }, "对唱"));
+		if (line.isBackground) tags.push(h("span", { className: "tag bg" }, "背景"));
 		if (line.translatedLyric) tags.push(h("span", { className: "tag trans" }, "译"));
 		if (line.romanLyric) tags.push(h("span", { className: "tag roman" }, "音"));
 		if (line.style) tags.push(h("span", { className: "tag style" }, "样式"));

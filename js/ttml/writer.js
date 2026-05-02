@@ -34,12 +34,17 @@ export function writeTTML(project) {
 	 * @returns {Element}
 	 */
 	function createWordSpan(word) {
-		const span = doc.createElementNS(NS.tt, "span");
+		const span = doc.createElement("span");
 		span.setAttribute("begin", msToTimestamp(word.startTime));
 		span.setAttribute("end", msToTimestamp(word.endTime));
 		span.textContent = word.word;
 
-		// 写入逐字样式覆盖
+		// style 引用
+		if (word.styleRef) {
+			span.setAttribute("style", word.styleRef);
+		}
+
+		// lv: 自定义样式覆盖
 		if (word.style) {
 			if (word.style.scale !== undefined) {
 				span.setAttribute("lv:scale", String(word.style.scale));
@@ -56,7 +61,7 @@ export function writeTTML(project) {
 	}
 
 	/**
-	 * 判断歌词是否为动态歌词（有逐词时间）
+	 * 判断是否为动态歌词（有逐词时间）
 	 */
 	function isDynamicLyric() {
 		return lyrics.some(
@@ -64,114 +69,192 @@ export function writeTTML(project) {
 		);
 	}
 
+	/**
+	 * 按 regionId 将歌词行分组，用于 div 输出
+	 * @returns {Array<{regionId: string|null, lines: import("./types.js").LyricLine[]}>}
+	 */
+	function groupByRegion() {
+		/** @type {Array<{regionId: string|null, lines: import("./types.js").LyricLine[]}>} */
+		const groups = [];
+		for (const line of lyrics) {
+			const last = groups[groups.length - 1];
+			if (last && last.regionId === (line.regionId || null)) {
+				last.lines.push(line);
+			} else {
+				groups.push({ regionId: line.regionId || null, lines: [line] });
+			}
+		}
+		return groups;
+	}
+
 	// ---- 构建文档 ----
 
-	const ttRoot = doc.createElementNS(NS.tt, "tt");
+	const ttRoot = doc.createElement("tt");
 	ttRoot.setAttribute("xmlns", NS.tt);
 	ttRoot.setAttribute("xmlns:ttm", NS.ttm);
 	ttRoot.setAttribute("xmlns:tts", NS.tts);
 	ttRoot.setAttribute("xmlns:amll", NS.amll);
 	ttRoot.setAttribute("xmlns:itunes", NS.itunes);
 	ttRoot.setAttribute("xmlns:lv", NS.lv);
+	ttRoot.setAttribute("xml:lang", project.lang || "en-US");
 	ttRoot.setAttribute("itunes:timing", isDynamicLyric() ? "Word" : "Line");
 	doc.appendChild(ttRoot);
 
 	// ---- Head + Metadata ----
-	const head = doc.createElementNS(NS.tt, "head");
-	const metadata = doc.createElementNS(NS.ttm, "metadata");
+	const head = doc.createElement("head");
+	const metadata = doc.createElement("metadata");
 
-	// 主 agent
-	const mainAgent = doc.createElementNS(NS.ttm, "ttm:agent");
-	mainAgent.setAttribute("type", "person");
-	mainAgent.setAttribute("xml:id", "v1");
-	metadata.appendChild(mainAgent);
+	// 标题
+	if (project.title) {
+		const titleEl = doc.createElement("ttm:title");
+		titleEl.textContent = project.title;
+		metadata.appendChild(titleEl);
+	}
 
-	// 对唱 agent（如果有对唱行）
-	const hasDuet = lyrics.some((l) => l.isDuet);
-	if (hasDuet) {
-		const duetAgent = doc.createElementNS(NS.ttm, "ttm:agent");
-		duetAgent.setAttribute("type", "other");
-		duetAgent.setAttribute("xml:id", "v2");
-		metadata.appendChild(duetAgent);
+	// agent 声明
+	for (const agent of project.agents) {
+		const agentEl = doc.createElement("ttm:agent");
+		agentEl.setAttribute("type", agent.type);
+		agentEl.setAttribute("xml:id", agent.id);
+		if (agent.name) {
+			const nameEl = doc.createElement("ttm:name");
+			nameEl.setAttribute("type", "full");
+			nameEl.textContent = agent.name;
+			agentEl.appendChild(nameEl);
+		}
+		metadata.appendChild(agentEl);
+	}
+
+	// 如果没有声明任何 agent，添加默认的 v1
+	if (project.agents.length === 0) {
+		const defaultAgent = doc.createElement("ttm:agent");
+		defaultAgent.setAttribute("type", "person");
+		defaultAgent.setAttribute("xml:id", "v1");
+		metadata.appendChild(defaultAgent);
 	}
 
 	head.appendChild(metadata);
+
+	// ---- Styling ----
+	const styleIds = Object.keys(project.styles);
+	if (styleIds.length > 0) {
+		const styling = doc.createElement("styling");
+		for (const sid of styleIds) {
+			const s = project.styles[sid];
+			const styleEl = doc.createElement("style");
+			styleEl.setAttribute("xml:id", s.id);
+			for (const [key, value] of Object.entries(s.properties)) {
+				styleEl.setAttribute(`tts:${key}`, value);
+			}
+			styling.appendChild(styleEl);
+		}
+		head.appendChild(styling);
+	}
+
+	// ---- Layout ----
+	const regionIds = Object.keys(project.regions);
+	if (regionIds.length > 0) {
+		const layout = doc.createElement("layout");
+		for (const rid of regionIds) {
+			const r = project.regions[rid];
+			const regionEl = doc.createElement("region");
+			regionEl.setAttribute("xml:id", r.id);
+			if (r.origin) regionEl.setAttribute("tts:origin", r.origin);
+			if (r.extent) regionEl.setAttribute("tts:extent", r.extent);
+			if (r.textAlign) regionEl.setAttribute("tts:textAlign", r.textAlign);
+			if (r.displayAlign) regionEl.setAttribute("tts:displayAlign", r.displayAlign);
+			if (r.styleRef) regionEl.setAttribute("style", r.styleRef);
+			layout.appendChild(regionEl);
+		}
+		head.appendChild(layout);
+	}
+
 	ttRoot.appendChild(head);
 
 	// ---- Body ----
-	const body = doc.createElementNS(NS.tt, "body");
+	const body = doc.createElement("body");
 	const totalDuration = lyrics.length > 0
 		? Math.max(...lyrics.map((l) => l.endTime))
 		: 0;
 	body.setAttribute("dur", msToTimestamp(totalDuration));
 
-	const div = doc.createElementNS(NS.tt, "div");
-	if (lyrics.length > 0) {
-		div.setAttribute("begin", msToTimestamp(lyrics[0].startTime));
-		div.setAttribute("end", msToTimestamp(lyrics[lyrics.length - 1].endTime));
-	}
-
 	const dynamic = isDynamicLyric();
+	const groups = groupByRegion();
 
-	for (const line of lyrics) {
-		const p = doc.createElementNS(NS.tt, "p");
-		p.setAttribute("begin", msToTimestamp(line.startTime));
-		p.setAttribute("end", msToTimestamp(line.endTime));
-		p.setAttribute("ttm:agent", line.isDuet ? "v2" : "v1");
-		p.setAttribute("itunes:key", line.id);
-
-		// 写入逐行样式覆盖
-		if (line.style) {
-			if (line.style.scale !== undefined) {
-				p.setAttribute("lv:scale", String(line.style.scale));
-			}
-			if (line.style.color !== undefined) {
-				p.setAttribute("lv:color", line.style.color);
-			}
+	for (const group of groups) {
+		const div = doc.createElement("div");
+		if (group.regionId) {
+			div.setAttribute("region", group.regionId);
+		}
+		if (group.lines.length > 0) {
+			div.setAttribute("begin", msToTimestamp(group.lines[0].startTime));
+			div.setAttribute("end", msToTimestamp(group.lines[group.lines.length - 1].endTime));
 		}
 
-		if (dynamic) {
-			// 动态歌词：每个单词都是 span
-			for (const word of line.words) {
-				if (word.word.trim().length === 0) {
-					p.appendChild(doc.createTextNode(word.word));
-				} else {
-					p.appendChild(createWordSpan(word));
+		for (const line of group.lines) {
+			const p = doc.createElement("p");
+			p.setAttribute("begin", msToTimestamp(line.startTime));
+			p.setAttribute("end", msToTimestamp(line.endTime));
+			p.setAttribute("ttm:agent", line.agentId || "v1");
+			p.setAttribute("itunes:key", line.id);
+
+			// style 引用
+			if (line.styleRef) {
+				p.setAttribute("style", line.styleRef);
+			}
+
+			// 行级 region（覆盖 div 的 region）
+			if (line.regionId && line.regionId !== group.regionId) {
+				p.setAttribute("region", line.regionId);
+			}
+
+			// lv: 行级样式覆盖
+			if (line.style) {
+				if (line.style.scale !== undefined) {
+					p.setAttribute("lv:scale", String(line.style.scale));
+				}
+				if (line.style.color !== undefined) {
+					p.setAttribute("lv:color", line.style.color);
 				}
 			}
-		} else {
-			// 静态歌词：只有第一个单词带时间
-			if (line.words.length > 0) {
-				const word = line.words[0];
-				p.appendChild(createWordSpan(word));
+
+			if (dynamic) {
+				for (const word of line.words) {
+					if (word.word.trim().length === 0) {
+						p.appendChild(doc.createTextNode(word.word));
+					} else {
+						p.appendChild(createWordSpan(word));
+					}
+				}
+			} else if (line.words.length > 0) {
+				p.appendChild(createWordSpan(line.words[0]));
 			}
+
+			// 翻译
+			if (line.translatedLyric) {
+				const transSpan = doc.createElement("span");
+				transSpan.setAttribute("ttm:role", "x-translation");
+				transSpan.setAttribute("xml:lang", "zh-CN");
+				transSpan.textContent = line.translatedLyric;
+				p.appendChild(transSpan);
+			}
+
+			// 音译
+			if (line.romanLyric) {
+				const romanSpan = doc.createElement("span");
+				romanSpan.setAttribute("ttm:role", "x-roman");
+				romanSpan.textContent = line.romanLyric;
+				p.appendChild(romanSpan);
+			}
+
+			div.appendChild(p);
 		}
 
-		// 翻译
-		if (line.translatedLyric) {
-			const transSpan = doc.createElementNS(NS.tt, "span");
-			transSpan.setAttribute("ttm:role", "x-translation");
-			transSpan.setAttribute("xml:lang", "zh-CN");
-			transSpan.textContent = line.translatedLyric;
-			p.appendChild(transSpan);
-		}
-
-		// 音译
-		if (line.romanLyric) {
-			const romanSpan = doc.createElementNS(NS.tt, "span");
-			romanSpan.setAttribute("ttm:role", "x-roman");
-			romanSpan.textContent = line.romanLyric;
-			p.appendChild(romanSpan);
-		}
-
-		div.appendChild(p);
+		body.appendChild(div);
 	}
 
-	body.appendChild(div);
 	ttRoot.appendChild(body);
 
-	// ---- 序列化 ----
-	// XMLSerializer 输出无格式单行，适合机器处理
 	return new XMLSerializer().serializeToString(doc);
 }
 

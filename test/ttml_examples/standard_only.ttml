@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  纯 TTML 1.0 (DFXP) 标准文件
+  特点：
+  - 仅使用 W3C 标准元素与属性
+  - 包含逐字时间码、对唱、背景人声、样式、区域布局
+  - 无任何自定义命名空间或非标准属性
+  - 适用于所有兼容 TTML 1.0 的解析器
+-->
+<tt xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling"
+    xmlns:ttm="http://www.w3.org/ns/ttml#metadata"
+    xml:lang="en-US">
+
+  <head>
+    <metadata>
+      <ttm:title>Standard Only Example</ttm:title>
+      <!-- 演唱者声明（对唱功能） -->
+      <ttm:agent type="person" xml:id="singerA">
+        <ttm:name type="full">Singer A</ttm:name>
+      </ttm:agent>
+      <ttm:agent type="person" xml:id="singerB">
+        <ttm:name type="full">Singer B</ttm:name>
+      </ttm:agent>
+      <ttm:agent type="other" xml:id="bgVox">
+        <ttm:name type="full">Background Vocals</ttm:name>
+      </ttm:agent>
+    </metadata>
+
+    <styling>
+      <!-- 全局默认样式 -->
+      <style xml:id="defaultStyle"
+             tts:fontFamily="sansSerif"
+             tts:fontSize="100%"
+             tts:color="white"
+             tts:backgroundColor="transparent"/>
+      <!-- 高亮样式（用于逐字高亮） -->
+      <style xml:id="highlight"
+             tts:color="yellow"
+             tts:fontWeight="bold"/>
+      <!-- 背景人声样式 -->
+      <style xml:id="bgStyle"
+             tts:fontSize="70%"
+             tts:color="#AAAAAA"
+             tts:fontStyle="italic"/>
+    </styling>
+
+    <layout>
+      <!-- 主区域 -->
+      <region xml:id="main"
+              tts:origin="10% 75%"
+              tts:extent="80% 20%"
+              tts:textAlign="center"
+              tts:displayAlign="after"/>
+      <!-- 对唱左区域 -->
+      <region xml:id="left"
+              tts:origin="5% 75%"
+              tts:extent="40% 20%"
+              tts:textAlign="start"/>
+      <!-- 对唱右区域 -->
+      <region xml:id="right"
+              tts:origin="55% 75%"
+              tts:extent="40% 20%"
+              tts:textAlign="end"/>
+    </layout>
+  </head>
+
+  <body dur="00:30.000">
+    <!-- 主歌部分 - Singer A 独唱 -->
+    <div region="main" begin="00:01.000" end="00:10.000">
+      <p begin="00:02.000" end="00:06.000" ttm:agent="singerA" style="defaultStyle">
+        <span begin="00:02.000" end="00:02.500" style="highlight">This</span>
+        <span begin="00:02.500" end="00:03.000">is</span>
+        <span begin="00:03.000" end="00:03.800">a</span>
+        <span begin="00:03.800" end="00:04.500" style="highlight">standard</span>
+        <span begin="00:04.500" end="00:06.000">line.</span>
+      </p>
+    </div>
+
+    <!-- 对唱部分 - 左右分屏 -->
+    <div begin="00:10.000" end="00:20.000">
+      <p region="left" begin="00:11.000" end="00:15.000" ttm:agent="singerA" style="defaultStyle">
+        <span begin="00:11.000" end="00:11.800">Left</span>
+        <span begin="00:11.800" end="00:12.500">side</span>
+        <span begin="00:12.500" end="00:15.000">singer</span>
+      </p>
+      <p region="right" begin="00:13.000" end="00:17.000" ttm:agent="singerB" style="defaultStyle">
+        <span begin="00:13.000" end="00:13.800">Right</span>
+        <span begin="00:13.800" end="00:14.500">side</span>
+        <span begin="00:14.500" end="00:17.000">response</span>
+      </p>
+    </div>
+
+    <!-- 背景人声示例 -->
+    <div region="main" begin="00:20.000" end="00:30.000">
+      <p begin="00:21.000" end="00:25.000" ttm:agent="singerA" style="defaultStyle">
+        Main vocal
+      </p>
+      <p begin="00:22.000" end="00:26.000" ttm:agent="bgVox" style="bgStyle">
+        (Background harmony)
+      </p>
+    </div>
+  </body>
+</tt>

@@ -146,12 +146,20 @@ wc -l js/**/*.js css/*.css index.html
 
 ### 待支持（TTML 扩展格式）
 
-当前 `test/Helping Hands.ttml` 只覆盖了基本歌词结构。以下 AMLL TTML 特性尚未支持，需要用户提供包含这些特性的示例文件后实现：
+以下 AMLL 自定义属性/元素**明确不支持**（非标准 TTML，无跨工具兼容需求）：
 
-- **背景歌词**（Background vocals）：与主唱区分开的伴唱/和声行
-- **空拍数量**（Rest/duration gaps）：单词之间无演唱的时间间隔
-- **逐词音译**（Per-word romanization）：每个单词的读音标注（不仅是整行 `x-roman`）
-- **不雅用语标识**（Explicit/profanity flag）：单词级别的内容标记
+- **`amll:obscene="true"`** — 单词级不雅用语标识
+- **`amll:empty-beat="<NUMBER>"`** — 词间空拍数
+- **`<transliterations>`** — head 中的逐词音译块（整行 `x-roman` 已支持）
+
+### 已支持的 TTML 1.0 标准特性（Phase 2b）
+
+- 多 agent（`type="person"|"group"|"other"`）含背景人声
+- `<styling>` 样式块 + `style="id"` 引用（原样保留，不自作修改）
+- `<region>` 布局区域 + `region="id"` 关联
+- `<div>` 段落分组
+- `ttm:title` / `xml:lang` 元数据
+- `lv:` 命名空间逐字样式覆盖（scale / color / bold）
 
 ### 已知技术限制
 

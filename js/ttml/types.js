@@ -30,6 +30,7 @@ export function createLyricWord(word = "", startTime = 0, endTime = 0) {
 		startTime,
 		endTime,
 		style: null,
+		styleRef: null,
 	};
 }
 
@@ -45,7 +46,11 @@ export function createLyricLine() {
 		startTime: 0,
 		endTime: 0,
 		isDuet: false,
+		isBackground: false,
+		agentId: "",
 		style: null,
+		styleRef: null,
+		regionId: null,
 	};
 }
 
@@ -82,7 +87,12 @@ export function createDefaultConfig() {
 export function createEmptyProject() {
 	return {
 		version: 1,
+		title: null,
+		lang: "en-US",
 		lyrics: [],
+		agents: [],
+		styles: {},
+		regions: {},
 		animConfig: createDefaultConfig(),
 		audioFileName: null,
 	};
@@ -104,6 +114,7 @@ export function createEmptyProject() {
  * @property {number} startTime
  * @property {number} endTime
  * @property {WordStyle|null} style
+ * @property {string|null} styleRef - 引用的 TTML style id
  */
 
 /**
@@ -121,7 +132,34 @@ export function createEmptyProject() {
  * @property {number} startTime
  * @property {number} endTime
  * @property {boolean} isDuet
+ * @property {boolean} isBackground
+ * @property {string} agentId
  * @property {LineStyle|null} style
+ * @property {string|null} styleRef
+ * @property {string|null} regionId
+ */
+
+/**
+ * @typedef {object} AgentInfo
+ * @property {string} id
+ * @property {string} type - 'person' | 'group' | 'other'
+ * @property {string} name
+ */
+
+/**
+ * @typedef {object} TtmlStyle
+ * @property {string} id
+ * @property {Record<string, string>} properties - tts 属性（键不含 tts: 前缀）
+ */
+
+/**
+ * @typedef {object} RegionInfo
+ * @property {string} id
+ * @property {string} origin
+ * @property {string} extent
+ * @property {string} textAlign
+ * @property {string} displayAlign
+ * @property {string|null} styleRef
  */
 
 /**
@@ -134,7 +172,12 @@ export function createEmptyProject() {
 /**
  * @typedef {object} ProjectData
  * @property {number} version
+ * @property {string|null} title
+ * @property {string} lang
  * @property {LyricLine[]} lyrics
+ * @property {AgentInfo[]} agents
+ * @property {Record<string, TtmlStyle>} styles
+ * @property {Record<string, RegionInfo>} regions
  * @property {AnimationConfig} animConfig
  * @property {string|null} audioFileName
  */

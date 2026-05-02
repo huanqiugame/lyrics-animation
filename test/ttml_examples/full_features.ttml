@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  完整特性版本：TTML 1.0 标准 + 自定义动画命名空间
+  特点：
+  - 保留所有标准元素与属性，确保其他解析器可读取基础结构
+  - 新增 myanim: 命名空间，用于驱动自研渲染引擎的动效
+  - 自定义属性可附加在 <p>、<span> 甚至 <div> 上
+  - 标准解析器会安全忽略自定义属性，不影响基础功能
+-->
+<tt xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling"
+    xmlns:ttm="http://www.w3.org/ns/ttml#metadata"
+    xmlns:myanim="http://yourcompany.com/ns/ttml-animation"
+    xml:lang="en-US">
+
+  <head>
+    <metadata>
+      <ttm:title>Full Features with Custom Animation</ttm:title>
+      <!-- 演唱者声明 -->
+      <ttm:agent type="person" xml:id="singerA">
+        <ttm:name type="full">Singer A</ttm:name>
+      </ttm:agent>
+      <ttm:agent type="person" xml:id="singerB">
+        <ttm:name type="full">Singer B</ttm:name>
+      </ttm:agent>
+      <ttm:agent type="other" xml:id="bgVox">
+        <ttm:name type="full">Background</ttm:name>
+      </ttm:agent>
+    </metadata>
+
+    <styling>
+      <style xml:id="defaultStyle"
+             tts:fontFamily="sansSerif"
+             tts:fontSize="100%"
+             tts:color="white"/>
+      <style xml:id="highlight"
+             tts:color="yellow"
+             tts:fontWeight="bold"/>
+      <style xml:id="bgStyle"
+             tts:fontSize="70%"
+             tts:color="gray"
+             tts:fontStyle="italic"/>
+    </styling>
+
+    <layout>
+      <region xml:id="main"
+              tts:origin="10% 75%"
+              tts:extent="80% 20%"
+              tts:textAlign="center"/>
+      <region xml:id="left"
+              tts:origin="5% 75%"
+              tts:extent="40% 20%"
+              tts:textAlign="start"/>
+      <region xml:id="right"
+              tts:origin="55% 75%"
+              tts:extent="40% 20%"
+              tts:textAlign="end"/>
+    </layout>
+  </head>
+
+  <body dur="00:35.000">
+    <!-- 标准行 + 自定义整行动画 -->
+    <div region="main" begin="00:01.000" end="00:12.000"
+         myanim:containerFade="in">
+      <p begin="00:02.000" end="00:06.000" ttm:agent="singerA" style="defaultStyle"
+         myanim:enter="slideUp" myanim:exit="fadeOut" myanim:duration="0.4s">
+        <span begin="00:02.000" end="00:02.500" style="highlight"
+              myanim:pulse="once" myanim:scale="1.2">This</span>
+        <span begin="00:02.500" end="00:03.000"
+              myanim:delay="0.1s" myanim:colorShift="blue">is</span>
+        <span begin="00:03.000" end="00:03.800"
+              myanim:bounce="true">a</span>
+        <span begin="00:03.800" end="00:04.500" style="highlight"
+              myanim:textGlow="2px yellow">custom</span>
+        <span begin="00:04.500" end="00:06.000"
+              myanim:rotate="3deg" myanim:shake="soft">line.</span>
+      </p>
+    </div>
+
+    <!-- 对唱 + 自定义区域动画 -->
+    <div begin="00:12.000" end="00:24.000">
+      <p region="left" begin="00:13.000" end="00:18.000" ttm:agent="singerA" style="defaultStyle"
+         myanim:enter="flyInLeft" myanim:exit="flyOutLeft">
+        <span begin="00:13.000" end="00:13.800" myanim:wave="true">Left</span>
+        <span begin="00:13.800" end="00:14.500">singer</span>
+        <span begin="00:14.500" end="00:18.000" myanim:typewriter="fast">animation</span>
+      </p>
+      <p region="right" begin="00:15.000" end="00:20.000" ttm:agent="singerB" style="defaultStyle"
+         myanim:enter="flyInRight" myanim:exit="fadeOut">
+        <span begin="00:15.000" end="00:15.800" myanim:colorChange="pink">Right</span>
+        <span begin="00:15.800" end="00:16.500">side</span>
+        <span begin="00:16.500" end="00:20.000" myanim:letterSpacing="2px">effects</span>
+      </p>
+    </div>
+
+    <!-- 背景人声 + 自定义透明度动画 -->
+    <div region="main" begin="00:24.000" end="00:35.000">
+      <p begin="00:25.000" end="00:29.000" ttm:agent="singerA" style="defaultStyle"
+         myanim:textShadow="0px 0px 4px white">
+        Main line <span myanim:pulse="infinite">✨</span>
+      </p>
+      <p begin="00:26.000" end="00:31.000" ttm:agent="bgVox" style="bgStyle"
+         myanim:opacity="0.3→0.8→0.3" myanim:duration="2s" myanim:loop="2">
+        (Background with custom fade)
+      </p>
+      <!-- 逐字独立动画示例 -->
+      <p begin="00:32.000" end="00:34.500" style="defaultStyle"
+         myanim:stagger="0.1s">
+        <span begin="00:32.000" end="00:32.600" myanim:pop="1.5">逐</span>
+        <span begin="00:32.600" end="00:33.200" myanim:pop="1.5">字</span>
+        <span begin="00:33.200" end="00:33.800" myanim:pop="1.5">动</span>
+        <span begin="00:33.800" end="00:34.500" myanim:pop="1.5">画</span>
+      </p>
+    </div>
+  </body>
+</tt>

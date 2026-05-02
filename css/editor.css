@@ -251,6 +251,11 @@
 	color: #5dade2;
 }
 
+.tag.bg {
+	background: rgba(187, 134, 252, 0.2);
+	color: #bb86fc;
+}
+
 .tag.trans {
 	background: rgba(24, 160, 88, 0.2);
 	color: var(--accent);
