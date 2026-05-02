@@ -82,10 +82,10 @@ function wordFromElement(wordEl) {
 function parseAgents(doc) {
 	/** @type {import("./types.js").AgentInfo[]} */
 	const agents = [];
-	for (const el of doc.querySelectorAll("ttm\\:agent")) {
+	for (const el of doc.getElementsByTagName("ttm:agent")) {
 		const id = el.getAttribute("xml:id");
 		const type = el.getAttribute("type") || "person";
-		const nameEl = el.querySelector("ttm\\:name");
+		const nameEl = el.getElementsByTagName("ttm:name")[0];
 		const name = nameEl ? (nameEl.textContent ?? "").trim() : "";
 		if (id) agents.push({ id, type, name });
 	}
@@ -172,7 +172,7 @@ export function parseTTML(ttmlText) {
 
 	// 元数据
 	project.lang = doc.documentElement.getAttribute("xml:lang") || "en-US";
-	const titleEl = doc.querySelector("ttm\\:title");
+	const titleEl = doc.getElementsByTagName("ttm:title")[0];
 	if (titleEl) project.title = (titleEl.textContent ?? "").trim();
 
 	// 解析 head 中的结构化数据
@@ -232,8 +232,15 @@ export function parseTTML(ttmlText) {
 			line.agentId = agentId;
 
 			const agent = findAgent(agentId);
-			line.isDuet = agentId !== mainAgentId && (!agent || agent.type === "person");
-			line.isBackground = !!agent && agent.type !== "person";
+			const personCount = project.agents.filter((a) => a.type === "person").length;
+			if (personCount === 1 && agent && agent.type !== "person") {
+				// AMLL 格式：仅 1 个 person agent，其他 type 是对唱搭档
+				line.isDuet = true;
+				line.isBackground = false;
+			} else {
+				line.isDuet = agentId !== mainAgentId && (!agent || agent.type === "person");
+				line.isBackground = !!agent && agent.type !== "person";
+			}
 
 			// style 引用
 			const styleRef = getAttr(lineEl, "style");

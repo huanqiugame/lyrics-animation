@@ -115,6 +115,7 @@ app.js（协调层）
 4. **浏览器兼容**：目标 Chrome/Safari/Firefox 最新版，使用 ES modules (`<script type="module">`)
 5. **文件编码**：TTML 文件使用 UTF-8
 6. **无外部依赖**：任何功能优先考虑浏览器原生 API 实现，禁止引入 npm 包或 CDN 库
+7. **代码缩进**：使用 **Tab** 缩进（不用空格），与现有代码风格保持一致
 
 ## 开发命令
 
