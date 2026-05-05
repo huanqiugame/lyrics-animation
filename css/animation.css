@@ -1,0 +1,40 @@
+/* 动画预览画布样式 — 字幕模式 */
+
+/* ===== 动画画布 ===== */
+.anim-canvas {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    perspective: 800px;
+}
+
+/* ===== 歌词行 ===== */
+.anim-line {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.anim-line.hidden {
+    display: none;
+}
+
+/* ===== 歌词字 ===== */
+.anim-word {
+    display: inline-block;
+    will-change: transform, opacity, filter;
+    transform-style: preserve-3d;
+    white-space: pre;
+}
+
+.anim-word.hidden {
+    display: none;
+}
