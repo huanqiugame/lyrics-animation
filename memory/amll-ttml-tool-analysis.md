@@ -10,7 +10,7 @@ type: project
 
 ## Overview
 
-amll-ttml-tool (local clone at `amll-ttml-tool/`) is a React 19 + TypeScript + Vite 7 application for editing TTML-based lyric animations. It uses Jotai for state management, Radix UI for accessible components, and Framer Motion for animations.
+amll-ttml-tool (local clone at `../amll-ttml-tool/`) is a React 19 + TypeScript + Vite 7 application for editing TTML-based lyric animations. It uses Jotai for state management, Radix UI for accessible components, and Framer Motion for animations.
 
 **License:** GPLv3
 

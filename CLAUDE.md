@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **无构建工具** — 不依赖 Vite/Webpack/pnpm，浏览器直接加载 ES modules
 - **浏览器原生 API** — DOM API、CSS Animations、Web Audio API、FileReader/Blob
 - **零外部运行时依赖** — 所有功能用浏览器原生能力实现
-- **代码缩进**：使用 **Tab** 缩进
+- **代码缩进**：使用 **4 个空格** 缩进
 
 ## 架构
 
@@ -42,6 +42,16 @@ app.js（协调层）
 3. **全局动画配置**：独立 JSON 文件，**不写入 TTML**
 4. **TTML 样式**：导入的 `<styling>` 块原样保留，不自作修改；逐字样式通过 `lv:` 属性写入
 5. **选择器**：parser 中查询命名空间元素（`ttm:agent` 等）用 `getElementsByTagName`，比 `querySelector` 更兼容 `xmlns=""` 的情况
+
+## 代码风格
+
+- **缩进**：使用 4 个空格
+- **变量命名**：局部变量和对象属性使用 `snake_case`（如 `start_time`、`is_duet`）
+- **保留驼峰**：
+  - 类名、构造函数：`AudioEngine`、`EventBus`（PascalCase）
+  - DOM API 调用：`createElement`、`getElementById`
+  - CSS 属性名：`el.style.fontSize`
+  - 导出函数名：`parseTTML`、`writeTTML`
 
 详细数据模型见 `docs/data-model.md`，TTML 格式支持见 `docs/ttml-format.md`。
 
