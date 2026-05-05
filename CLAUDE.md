@@ -87,7 +87,7 @@ Node 路径：`/Users/huanqiu/.nvm/versions/node/v24.15.0/bin/node`（nvm 管理
 - [x] Phase 2: 基础 UI 外壳 + 文件 IO + 事件总线
 - [x] Phase 2b: TTML 标准扩展格式支持（多 agent/背景人声/styling/region/div）
 - [x] Phase 3: 音频引擎
-- [ ] Phase 4: 动画渲染引擎 + 预览
+- [x] Phase 4: 动画渲染引擎 + 字幕模式预览
 - [ ] Phase 5: 动画参数控制面板
 - [ ] Phase 6: 逐词样式覆盖 + 导出
 - [ ] Phase 7: 时间轴可视化 + 拖拽排序
