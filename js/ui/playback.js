@@ -11,83 +11,83 @@ import { msToTimestamp } from "../utils/time.js";
  * @param {import("../audio/engine.js").AudioEngine} engine
  */
 export function initPlayback(engine) {
-	const btnPlay = document.getElementById("btn-play");
-	const timeDisplay = document.getElementById("time-display");
-	const progressBar = document.getElementById("progress-bar");
-	const volumeSlider = document.getElementById("volume-slider");
+    const btn_play = document.getElementById("btn-play");
+    const time_display = document.getElementById("time-display");
+    const progress_bar = document.getElementById("progress-bar");
+    const volume_slider = document.getElementById("volume-slider");
 
-	let isSeeking = false;
-	let duration = 0;
+    let is_seeking = false;
+    let duration = 0;
 
-	function updateTimeDisplay(currentTime) {
-		timeDisplay.textContent = `${msToTimestamp(currentTime)} / ${msToTimestamp(duration)}`;
-	}
+    function update_time_display(current_time) {
+        time_display.textContent = `${msToTimestamp(current_time)} / ${msToTimestamp(duration)}`;
+    }
 
-	// ---- 播放/暂停按钮 ----
-	btnPlay.addEventListener("click", () => {
-		if (!engine.hasAudio) return;
-		engine.toggle();
-	});
+    // ---- 播放/暂停按钮 ----
+    btn_play.addEventListener("click", () => {
+        if (!engine.hasAudio) return;
+        engine.toggle();
+    });
 
-	bus.on("audio:play", () => {
-		btnPlay.textContent = "⏸";
-	});
+    bus.on("audio:play", () => {
+        btn_play.textContent = "⏸";
+    });
 
-	bus.on("audio:pause", () => {
-		btnPlay.textContent = "▶";
-	});
+    bus.on("audio:pause", () => {
+        btn_play.textContent = "▶";
+    });
 
-	// ---- 时间更新 ----
-	bus.on("audio:timeupdate", ({ currentTime }) => {
-		if (!isSeeking) {
-			progressBar.value = currentTime;
-		}
-		updateTimeDisplay(currentTime);
-	});
+    // ---- 时间更新 ----
+    bus.on("audio:timeupdate", ({ currentTime }) => {
+        if (!is_seeking) {
+            progress_bar.value = currentTime;
+        }
+        update_time_display(currentTime);
+    });
 
-	// ---- 音频加载完成 ----
-	bus.on("audio:loaded", ({ duration: dur }) => {
-		duration = dur;
-		progressBar.max = dur;
-		progressBar.value = 0;
-		progressBar.disabled = false;
-		btnPlay.disabled = false;
-		updateTimeDisplay(0);
-	});
+    // ---- 音频加载完成 ----
+    bus.on("audio:loaded", ({ duration: dur }) => {
+        duration = dur;
+        progress_bar.max = dur;
+        progress_bar.value = 0;
+        progress_bar.disabled = false;
+        btn_play.disabled = false;
+        update_time_display(0);
+    });
 
-	// ---- 进度条 ----
-	progressBar.addEventListener("mousedown", () => {
-		isSeeking = true;
-	});
+    // ---- 进度条 ----
+    progress_bar.addEventListener("mousedown", () => {
+        is_seeking = true;
+    });
 
-	document.addEventListener("mouseup", () => {
-		if (isSeeking) {
-			isSeeking = false;
-			engine.seek(Number(progressBar.value));
-		}
-	});
+    document.addEventListener("mouseup", () => {
+        if (is_seeking) {
+            is_seeking = false;
+            engine.seek(Number(progress_bar.value));
+        }
+    });
 
-	progressBar.addEventListener("input", () => {
-		if (isSeeking) {
-			updateTimeDisplay(Number(progressBar.value));
-		}
-	});
+    progress_bar.addEventListener("input", () => {
+        if (is_seeking) {
+            update_time_display(Number(progress_bar.value));
+        }
+    });
 
-	// ---- 音量滑块 ----
-	volumeSlider.addEventListener("input", () => {
-		engine.setVolume(Number(volumeSlider.value));
-	});
+    // ---- 音量滑块 ----
+    volume_slider.addEventListener("input", () => {
+        engine.setVolume(Number(volume_slider.value));
+    });
 
-	// ---- 键盘快捷键 ----
-	document.addEventListener("keydown", (e) => {
-		// 空格键：播放/暂停（不在输入框中生效）
-		if (e.code === "Space" && engine.hasAudio) {
-			const tag = document.activeElement?.tagName;
-			if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) {
-				return;
-			}
-			e.preventDefault();
-			engine.toggle();
-		}
-	});
+    // ---- 键盘快捷键 ----
+    document.addEventListener("keydown", (e) => {
+        // 空格键：播放/暂停（不在输入框中生效）
+        if (e.code === "Space" && engine.hasAudio) {
+            const tag = document.activeElement?.tagName;
+            if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) {
+                return;
+            }
+            e.preventDefault();
+            engine.toggle();
+        }
+    });
 }
