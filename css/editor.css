@@ -57,7 +57,7 @@
 }
 
 /* 可拖拽分隔线 */
-#panel-divider {
+.panel-divider {
 	width: 4px;
 	flex-shrink: 0;
 	background: var(--border);
@@ -66,14 +66,14 @@
 	position: relative;
 }
 
-#panel-divider::after {
+.panel-divider::after {
 	content: "";
 	position: absolute;
 	inset: 0 -4px;
 }
 
-#panel-divider:hover,
-#panel-divider.dragging {
+.panel-divider:hover,
+.panel-divider.dragging {
 	background: var(--accent);
 }
 
@@ -166,10 +166,21 @@
 }
 
 #param-panel-box {
-	flex-shrink: 0;
-	max-height: 40%;
+	flex: 1;
 	display: flex;
 	flex-direction: column;
+	min-height: 0;
+}
+
+#param-panel-container {
+	width: 320px;
+	min-width: 200px;
+	max-width: 50%;
+	background: var(--bg);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	border-left: 1px solid var(--border);
 }
 
 .lyric-row {
@@ -230,6 +241,12 @@
 .word-tag.styled {
 	background: rgba(24, 160, 88, 0.2);
 	border: 1px solid rgba(24, 160, 88, 0.4);
+}
+
+.word-tag.word-selected {
+	background: rgba(24, 160, 88, 0.35);
+	outline: 2px solid var(--accent);
+	outline-offset: -1px;
 }
 
 .row-meta {
@@ -395,4 +412,297 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+/* Pico CSS 覆盖：保持布局紧凑 */
+#app {
+    min-height: 0 !important;
+    padding: 0 !important;
+}
+
+#param-panel input[type="range"] {
+    margin: 0 !important;
+}
+
+/* ===== 动画参数面板 ===== */
+#param-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px;
+}
+
+.param-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.param-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    background: var(--bg-secondary);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
+.param-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.param-toggle input[type="checkbox"] {
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.param-section-body {
+    padding: 5px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.param-section-body.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.param-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+}
+
+.param-group > label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    min-width: 50px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.param-controls {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.param-controls input[type="range"] {
+    flex: 1;
+    min-width: 50px;
+    height: 4px;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+.param-controls input[type="text"],
+.param-controls select {
+    flex: 1;
+    padding: 2px 5px;
+    font-size: 0.7rem;
+    min-width: 0;
+}
+
+.param-controls input[type="color"] {
+    width: 30px;
+    height: 22px;
+    padding: 1px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: none;
+}
+
+.param-value {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    min-width: 28px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* ===== 动画组编辑器 ===== */
+.anim-editor-empty {
+    padding: 8px;
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+.anim-group-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 4px 0;
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.anim-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.anim-group-body {
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.anim-anchor-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.anim-anchor-label {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    min-width: 24px;
+}
+
+.anim-anchor-row select {
+    font-size: 0.65rem;
+    padding: 1px 3px;
+    min-width: 60px;
+    flex: 1;
+}
+
+.anim-offset {
+    width: 48px;
+    font-size: 0.65rem;
+    padding: 1px 3px;
+    text-align: right;
+}
+
+.anim-unit {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
+.anim-channels-section {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-top: 4px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.anim-channels-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 6px;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
+.anim-channel-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 6px;
+    flex-wrap: wrap;
+}
+
+.anim-channel-row + .anim-channel-row {
+    border-top: 1px solid var(--border);
+}
+
+.anim-channel-row select {
+    font-size: 0.6rem;
+    padding: 1px 2px;
+    min-width: 55px;
+    flex: 1;
+}
+
+.anim-chan-val {
+    width: 44px;
+    font-size: 0.6rem;
+    padding: 1px 3px;
+}
+
+.anim-chan-label {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+}
+
+/* 编辑器按钮 */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.7rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    line-height: 1.2;
+    transition: all 0.1s;
+}
+
+.btn-icon:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--border);
+}
+
+.btn-remove-group:hover,
+.btn-remove-chan:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.btn-add-group,
+.btn-add-channel {
+    width: 100%;
+    padding: 4px;
+    font-size: 0.7rem;
+    color: var(--accent);
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.1s;
+    margin-top: 4px;
+}
+
+.btn-add-group:hover,
+.btn-add-channel:hover {
+    border-color: var(--accent);
+    background: rgba(24, 160, 88, 0.08);
+}
+
+/* 通道行中的紧凑 select/input */
+.anim-channel-row select,
+.anim-channel-row .anim-chan-val {
+    font-size: 0.6rem;
 }

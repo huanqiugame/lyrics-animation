@@ -28,6 +28,9 @@ export class AnimationRenderer {
     /** @type {HTMLElement[][]} */
     #wordElements = [];
 
+    /** @type {number} */
+    #currentTime = -1;
+
     /**
      * @param {HTMLElement} container - 预览容器 (#preview-content)
      */
@@ -41,10 +44,18 @@ export class AnimationRenderer {
         bus.on("config:changed", (config) => {
             if (this.#project) {
                 this.#project.anim_config = config;
+                this.applyTextConfig(config);
+                this.updateTime(this.#currentTime);
             }
         });
-        bus.on("audio:timeupdate", ({ currentTime }) => this.updateTime(currentTime));
-        bus.on("audio:seeked", ({ currentTime }) => this.updateTime(currentTime));
+        bus.on("audio:timeupdate", ({ currentTime }) => {
+            this.#currentTime = currentTime;
+            this.updateTime(currentTime);
+        });
+        bus.on("audio:seeked", ({ currentTime }) => {
+            this.#currentTime = currentTime;
+            this.updateTime(currentTime);
+        });
     }
 
     /**
@@ -54,10 +65,13 @@ export class AnimationRenderer {
     load(project) {
         this.#project = project;
         this.#wordElements = [];
+        this.#currentTime = -1;
 
         clear(this.#container);
 
         this.#canvas = h("div", { className: "anim-canvas" });
+
+        const tc = project.anim_config.text;
 
         for (let line_idx = 0; line_idx < project.lyrics.length; line_idx++) {
             const line = project.lyrics[line_idx];
@@ -70,11 +84,11 @@ export class AnimationRenderer {
             for (let word_idx = 0; word_idx < line.words.length; word_idx++) {
                 const word = line.words[word_idx];
                 const word_el = h("span", { className: "anim-word" }, word.word);
-                word_el.style.fontFamily = "system-ui, -apple-system, sans-serif";
-                word_el.style.fontSize = "32px";
-                word_el.style.color = "#ffffff";
-                word_el.style.textShadow = "none";
-                word_el.style.webkitTextStroke = "none";
+                word_el.style.fontFamily = tc.font_family;
+                word_el.style.fontSize = tc.font_size + "px";
+                word_el.style.color = tc.color;
+                word_el.style.textShadow = tc.text_shadow;
+                word_el.style.webkitTextStroke = tc.stroke;
                 line_el.appendChild(word_el);
                 word_els.push(word_el);
             }
@@ -133,6 +147,23 @@ export class AnimationRenderer {
                 for (const [channel_id, value] of styles) {
                     applyChannel(word_el, channel_id, value);
                 }
+            }
+        }
+    }
+
+    /**
+     * 应用文字配置到所有单词元素
+     * @param {import("../ttml/types.js").AnimationConfig} config
+     */
+    applyTextConfig(config) {
+        const tc = config.text;
+        for (const wordRow of this.#wordElements) {
+            for (const wordEl of wordRow) {
+                wordEl.style.fontFamily = tc.font_family;
+                wordEl.style.fontSize = tc.font_size + "px";
+                wordEl.style.color = tc.color;
+                wordEl.style.textShadow = tc.text_shadow;
+                wordEl.style.webkitTextStroke = tc.stroke;
             }
         }
     }

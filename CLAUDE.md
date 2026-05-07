@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # 逐字歌词动效编辑器
 
-基于 Web 的逐字歌词动效编辑器。导入 AMLL TTML Tool 生成的 TTML 逐词时间码文件，配置动画效果（模糊→清晰、上下滚动），同步音频实时预览，导出渲染配置。
+基于 Web 的逐字歌词动效编辑器。导入 AMLL TTML Tool 生成或标准的 TTML 逐词时间码文件，编辑逐词/逐行动画效果（不透明度、模糊、颜色、文字阴影、描边、3D 变换等可通过动画组自由组合），同步音频实时预览，导出带动画配置的 TTML。
 
 ## 技术栈约束
 
@@ -18,30 +18,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 app.js（协调层）
-  ├── ttml/parser.js      ← 纯函数，TTML → ProjectData
-  ├── ttml/writer.js      ← 纯函数，ProjectData → TTML
-  ├── audio/engine.js     ← EventTarget，派发音频事件
-  ├── animation/renderer.js ← 接收 lyrics+config，暴露 updateTime()
-  └── ui/*.js             ← DOM 组件，通过事件总线通信
+  ├── ttml/parser.js       ← 纯函数，TTML → ProjectData
+  ├── ttml/writer.js       ← 纯函数，ProjectData → TTML
+  ├── audio/engine.js      ← EventTarget，派发音频事件
+  ├── animation/
+  │   ├── renderer.js      ← 接收 project，暴露 updateTime()
+  │   ├── resolver.js      ← AnimationGroup 评估引擎（4 级优先级链）
+  │   ├── channels.js      ← 20+ 动画通道（opacity/blur/color/transform 等）
+  │   ├── easing.js        ← 12+ 缓动曲线预设 + 自定义贝塞尔
+  │   └── anchors.js       ← 锚点系统（transform-origin）
+  ├── ui/
+  │   ├── shell.js         ← 布局外壳
+  │   ├── file-io.js       ← 文件导入/导出
+  │   ├── lyric-list.js    ← 歌词列表
+  │   ├── playback.js      ← 播放控制
+  │   ├── param-panel.js   ← 动画组编辑器（全局/行级/字级）
+  │   └── ...              ← 后续 UI 组件
+  └── utils/
+      ├── events.js        ← EventBus
+      ├── dom.js           ← DOM 辅助函数
+      └── time.js          ← 时间戳转换
 ```
 
 **事件总线**（`js/utils/events.js`）：`EventBus extends EventTarget`，提供 `emit/on/off`。`on()` 用 `WeakMap` 保存包装函数引用确保 `off()` 正确移除。
 
 关键事件：
 - `lyrics:loaded` → `{ project }` — 解析完成
-- `lyrics:modified` → `{ project }` — 歌词数据变更
-- `config:changed` → `{ config }` — 动画参数变更
+- `lyrics:modified` → `{ project }` — 歌词/动画数据变更
+- `config:changed` → `{ config }` — 全局动画配置变更
 - `audio:timeupdate` → `{ currentTime }` — 驱动动画同步
 - `audio:play` / `audio:pause` / `audio:loaded`
-- `ui:selectLine` → `{ lineId, line }`
+- `ui:selectLine` → `{ lineId, line, index }` — 选中歌词行
+- `ui:selectWord` → `{ lineIndex, wordIndex, word }` — 选中逐词
+- `ui:animEdit` → `{ target, anim_groups }` — 动画组编辑完成
+- `ui:modeChange` → `{ mode }` — 编辑/预览模式切换
 
 ## 关键约定
 
 1. **时间单位**：内部全部使用毫秒（整数），TTML 解析/序列化时用 `parseTimespan`/`msToTimestamp` 转换 `MM:SS.mmm` 格式
 2. **样式覆盖**：`null` = 使用全局配置；非 `null` = 覆盖
-3. **全局动画配置**：独立 JSON 文件，**不写入 TTML**
-4. **TTML 样式**：导入的 `<styling>` 块原样保留，不自作修改；逐字样式通过 `lv:` 属性写入
-5. **选择器**：parser 中查询命名空间元素（`ttm:agent` 等）用 `getElementsByTagName`，比 `querySelector` 更兼容 `xmlns=""` 的情况
+3. **全局动画配置**：**不写入 TTML**，存储在独立 JSON 文件。逐行/逐字的动画组（`anim_groups`）通过 `lv:` 命名空间写入 TTML
+4. **TTML 样式**：导入的 `<styling>` 块原样保留，不自作修改
+5. **优先级链**：字动画组 > 行动画组 > 全局字动画组 > 全局行动画组 > 硬编码默认值（4 级）
+6. **选择器**：parser 中查询命名空间元素（`ttm:agent` 等）用 `getElementsByTagName`，比 `querySelector` 更兼容 `xmlns=""` 的情况
 
 ## 代码风格
 
@@ -59,7 +78,7 @@ app.js（协调层）
 
 ```bash
 npm install          # 安装测试依赖（jsdom，运行时不需要）
-npm test             # 运行 roundtrip-v2.mjs + phase3-audio.mjs（107 项断言）
+npm test             # 运行 roundtrip-v2.mjs + phase3-audio.mjs + phase4-animation.mjs
 node --check js/ttml/parser.js  # 语法检查
 python3 -m http.server 8080     # 启动开发服务器
 ```
@@ -83,11 +102,21 @@ Node 路径：`/Users/huanqiu/.nvm/versions/node/v24.15.0/bin/node`（nvm 管理
 
 ## 当前状态
 
+### 已完成
 - [x] Phase 1: TTML 解析器 + 数据模型
 - [x] Phase 2: 基础 UI 外壳 + 文件 IO + 事件总线
 - [x] Phase 2b: TTML 标准扩展格式支持（多 agent/背景人声/styling/region/div）
 - [x] Phase 3: 音频引擎
-- [x] Phase 4: 动画渲染引擎 + 字幕模式预览
-- [ ] Phase 5: 动画参数控制面板
-- [ ] Phase 6: 逐词样式覆盖 + 导出
-- [ ] Phase 7: 时间轴可视化 + 拖拽排序
+- [x] Phase 4: 动画渲染引擎 + 字幕模式预览（channels/resolver/easing/anchors）
+
+### 待完成
+- [ ] Phase 5: 动画组编辑器 UI + 导出模块
+  - 全局动画配置面板（text/blur/scroll 等顶层参数）
+  - AnimationGroup 编辑器（创建/编辑/删除动画组：选择通道、设置时间锚点、选曲线）
+  - 行级/字级动画组编辑（选中行/字后打开编辑器）
+  - 动画组序列化到 TTML（parser/writer 的 `lv:` 扩展）
+  - 导出 TTML + 动画配置 JSON
+- [ ] Phase 6: 时间轴可视化 + 拖拽排序 + UI 打磨
+  - 时间轴画布（行/字的可视化时间条）
+  - 拖拽调整时间
+  - 样式细节打磨

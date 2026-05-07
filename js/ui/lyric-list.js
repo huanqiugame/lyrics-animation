@@ -16,6 +16,8 @@ export function initLyricList(container) {
     let project = null;
     /** @type {string | null} */
     let selected_line_id = null;
+    /** @type {number} */
+    let selected_word_index = -1;
 
     /**
      * 渲染所有歌词行
@@ -46,12 +48,15 @@ export function initLyricList(container) {
         // 时间范围
         const time_str = `${msToTimestamp(line.start_time, { ms: false })} → ${msToTimestamp(line.end_time, { ms: false })}`;
 
-        // 歌词文本（逐词拼接）
+        // 歌词文本（逐词拼接，带选中状态和点击事件）
         const words_html = line.words
-            .map((w) => {
+            .map((w, wi) => {
                 const has_style = w.style && (w.style.scale || w.style.color || w.style.bold);
-                const c = has_style ? "word-tag styled" : "word-tag";
-                return `<span class="${c}" title="${msToTimestamp(w.start_time)} → ${msToTimestamp(w.end_time)}">${esc(w.word)}</span>`;
+                const is_word_selected = is_selected && wi === selected_word_index;
+                let word_class = "word-tag";
+                if (has_style) word_class += " styled";
+                if (is_word_selected) word_class += " word-selected";
+                return `<span class="${word_class}" title="${msToTimestamp(w.start_time)} → ${msToTimestamp(w.end_time)}" data-word-index="${wi}">${esc(w.word)}</span>`;
             })
             .join("");
 
@@ -75,6 +80,14 @@ export function initLyricList(container) {
             <span class="row-meta"></span>
         `;
 
+        // 逐词点击选择/取消
+        const word_spans = row.querySelectorAll(".word-tag");
+        word_spans.forEach((span, wi) => {
+            span.addEventListener("click", (e) => {
+                handleWordClick(e, line, wi);
+            });
+        });
+
         const meta_el = row.querySelector(".row-meta");
         for (const tag of tags) meta_el.appendChild(tag);
 
@@ -84,6 +97,24 @@ export function initLyricList(container) {
         }
 
         row.addEventListener("click", () => {
+            // 清除词汇选中状态
+            if (selected_word_index >= 0 && selected_line_id) {
+                const prev_row = container.querySelector(`.lyric-row[data-line-id="${selected_line_id}"]`);
+                if (prev_row) {
+                    const prev_words = prev_row.querySelectorAll(".word-tag");
+                    if (prev_words[selected_word_index]) prev_words[selected_word_index].classList.remove("word-selected");
+                }
+            }
+            selected_word_index = -1;
+
+            // 点击已选中的行 → 取消选择
+            if (selected_line_id === line.id) {
+                selected_line_id = null;
+                row.classList.remove("selected");
+                bus.emit("ui:selectLine", { lineId: null, line: null });
+                return;
+            }
+
             // 取消之前的选择
             const prev = container.querySelector(".lyric-row.selected");
             if (prev) prev.classList.remove("selected");
@@ -97,10 +128,51 @@ export function initLyricList(container) {
         return row;
     }
 
+    /**
+     * 处理逐词点击选择/取消
+     */
+    function handleWordClick(e, line, word_index) {
+        e.stopPropagation();
+        const word = line.words[word_index];
+
+        // 点击已选中的词 → 取消选择
+        if (selected_line_id === line.id && selected_word_index === word_index) {
+            selected_word_index = -1;
+            e.currentTarget.classList.remove("word-selected");
+            bus.emit("ui:selectWord", { lineId: null, line: null, wordIndex: null, word: null });
+            return;
+        }
+
+        // 清除之前词汇的选中样式
+        if (selected_word_index >= 0 && selected_line_id) {
+            const prev_row = container.querySelector(`.lyric-row[data-line-id="${selected_line_id}"]`);
+            if (prev_row) {
+                const prev_words = prev_row.querySelectorAll(".word-tag");
+                if (prev_words[selected_word_index]) prev_words[selected_word_index].classList.remove("word-selected");
+            }
+        }
+
+        // 如果点击不同行，先选中该行
+        if (selected_line_id !== line.id) {
+            const prev = container.querySelector(".lyric-row.selected");
+            if (prev) prev.classList.remove("selected");
+            selected_line_id = line.id;
+            const row = container.querySelector(`.lyric-row[data-line-id="${line.id}"]`);
+            if (row) row.classList.add("selected");
+            bus.emit("ui:selectLine", { lineId: line.id, line });
+        }
+
+        // 选中当前词
+        selected_word_index = word_index;
+        e.currentTarget.classList.add("word-selected");
+        bus.emit("ui:selectWord", { lineId: line.id, line, wordIndex: word_index, word });
+    }
+
     // ---- 事件监听 ----
     bus.on("lyrics:loaded", (proj) => {
         project = proj;
         selected_line_id = null;
+        selected_word_index = -1;
         render();
     });
 

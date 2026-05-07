@@ -189,6 +189,97 @@ if (emptyProject.lyrics.length > 0) {
 // xml:lang 回退
 check(emptyProject.lang === "ja-JP", "xml:lang 正确提取");
 
+// ==================== 测试 5: 动画组 roundtrip ====================
+section("5. 动画组 lv:anim-groups roundtrip");
+
+const animTtml = `<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:itunes="http://music.apple.com/lyric-ttml-internal" xmlns:lv="http://www.example.com/ns/lyric-vfx" xml:lang="en-US" itunes:timing="Word">
+<head>
+	<metadata><ttm:agent type="person" xml:id="v1"/></metadata>
+</head>
+<body dur="00:05.000">
+	<div>
+		<p begin="00:00.000" end="00:05.000" itunes:key="L1"
+		   lv:anim-groups='[{"start":{"ref":"lineStart","dir":"after","offset":0},"end":{"ref":"lineEnd","dir":"before","offset":200},"channels":[{"channel_id":"translateY","from":30,"to":0,"curve":"ease-out"}]}]'>
+			<span begin="00:00.000" end="00:02.500"
+			      lv:anim-groups='[{"start":{"ref":"wordStart","dir":"before","offset":500},"end":{"ref":"wordStart","dir":"after","offset":0},"channels":[{"channel_id":"opacity","from":0,"to":1,"curve":"linear"}]}]'>Hello</span>
+			<span begin="00:02.500" end="00:05.000"
+			      lv:anim-groups='[{"start":{"ref":"wordStart","dir":"before","offset":300},"end":{"ref":"wordEnd","dir":"after","offset":100},"channels":[{"channel_id":"blur","from":8,"to":0,"curve":"ease-out"},{"channel_id":"color","from":"#ffffff","to":"#ff0000","curve":"linear"}]}]'>World</span>
+		</p>
+	</div>
+</body>
+</tt>`;
+
+const animProj = parseTTML(animTtml);
+check(animProj.lyrics.length === 1, "动画组 TTML 行数=1");
+const animLine = animProj.lyrics[0];
+
+// 行动画组
+check(animLine.anim_groups.length === 1, `行动画组数量=1 (实际: ${animLine.anim_groups.length})`);
+if (animLine.anim_groups.length > 0) {
+	const lg = animLine.anim_groups[0];
+	check(lg.start.ref === "lineStart", `行动画组 start.ref=lineStart (实际: ${lg.start.ref})`);
+	check(lg.start.dir === "after", `行动画组 start.dir=after (实际: ${lg.start.dir})`);
+	check(lg.start.offset === 0, `行动画组 start.offset=0 (实际: ${lg.start.offset})`);
+	check(lg.end.ref === "lineEnd", `行动画组 end.ref=lineEnd (实际: ${lg.end.ref})`);
+	check(lg.end.dir === "before", `行动画组 end.dir=before (实际: ${lg.end.dir})`);
+	check(lg.end.offset === 200, `行动画组 end.offset=200 (实际: ${lg.end.offset})`);
+	check(lg.channels.length === 1, `行动画组通道数=1 (实际: ${lg.channels.length})`);
+	if (lg.channels.length > 0) {
+		check(lg.channels[0].channel_id === "translateY", `行动画组通道=translateY (实际: ${lg.channels[0].channel_id})`);
+		check(lg.channels[0].from === 30, `行动画组 from=30 (实际: ${lg.channels[0].from})`);
+		check(lg.channels[0].curve === "ease-out", `行动画组 curve=ease-out (实际: ${lg.channels[0].curve})`);
+	}
+}
+
+// 字动画组
+check(animLine.words.length === 2, "单词数=2");
+check(animLine.words[0].anim_groups.length === 1, `Hello 动画组数=1 (实际: ${animLine.words[0].anim_groups.length})`);
+check(animLine.words[1].anim_groups.length === 1, `World 动画组数=1 (实际: ${animLine.words[1].anim_groups.length})`);
+
+if (animLine.words[0].anim_groups.length > 0) {
+	const wg = animLine.words[0].anim_groups[0];
+	check(wg.start.ref === "wordStart", `Hello start.ref=wordStart`);
+	check(wg.start.dir === "before", `Hello start.dir=before`);
+	check(wg.start.offset === 500, `Hello start.offset=500 (实际: ${wg.start.offset})`);
+	check(wg.channels.length === 1, `Hello 通道数=1`);
+	check(wg.channels[0].channel_id === "opacity", `Hello 通道=opacity`);
+}
+
+if (animLine.words[1].anim_groups.length > 0) {
+	const wg2 = animLine.words[1].anim_groups[0];
+	check(wg2.channels.length === 2, `World 通道数=2 (实际: ${wg2.channels.length})`);
+	check(wg2.channels[0].channel_id === "blur", `World 通道0=blur (实际: ${wg2.channels[0].channel_id})`);
+	check(wg2.channels[1].channel_id === "color", `World 通道1=color (实际: ${wg2.channels[1].channel_id})`);
+	check(wg2.channels[0].from === 8, `World blur.from=8 (实际: ${wg2.channels[0].from})`);
+	check(wg2.channels[0].to === 0, `World blur.to=0 (实际: ${wg2.channels[0].to})`);
+	check(wg2.end.ref === "wordEnd", `World end.ref=wordEnd (实际: ${wg2.end.ref})`);
+	check(wg2.end.offset === 100, `World end.offset=100 (实际: ${wg2.end.offset})`);
+}
+
+// Roundtrip
+const animRT = parseTTML(writeTTML(animProj));
+check(animRT.lyrics.length === 1, "roundtrip 行数=1");
+check(animRT.lyrics[0].anim_groups.length === 1, "roundtrip 行动画组保留");
+check(animRT.lyrics[0].words[0].anim_groups.length === 1, "roundtrip Hello 动画组保留");
+check(animRT.lyrics[0].words[1].anim_groups.length === 1, "roundtrip World 动画组保留");
+
+if (animRT.lyrics[0].words[0].anim_groups.length > 0) {
+	const rwg = animRT.lyrics[0].words[0].anim_groups[0];
+	check(rwg.start.ref === "wordStart", "roundtrip start.ref=wordStart");
+	check(rwg.start.offset === 500, "roundtrip start.offset=500");
+	check(rwg.channels[0].channel_id === "opacity", "roundtrip 通道=opacity");
+	check(rwg.channels[0].from === 0, "roundtrip opacity.from=0");
+	check(rwg.channels[0].to === 1, "roundtrip opacity.to=1");
+	check(rwg.channels[0].curve === "linear", "roundtrip opacity.curve=linear");
+}
+
+if (animRT.lyrics[0].anim_groups.length > 0) {
+	const rlg = animRT.lyrics[0].anim_groups[0];
+	check(rlg.channels[0].channel_id === "translateY", "roundtrip 行通道=translateY");
+	check(rlg.channels[0].from === 30, "roundtrip 行 from=30");
+}
+
 // ==================== 汇总 ====================
 console.log("\n═══════════════════════════════════");
 console.log(`通过: ${passed}  失败: ${failed}`);
@@ -198,6 +289,7 @@ if (failed === 0) {
 	console.log(`  standard_only:     ${so.lyrics.length} 行, agents/styles/regions/背景 全部正确 ✓`);
 	console.log(`  full_features:     ${ff.lyrics.length} 行, ${ffWords} 词, 自定义属性安全忽略 ✓`);
 	console.log(`  3 文件 roundtrip  解析→生成→解析 数据一致 ✓`);
+	console.log(`  动画组 roundtrip  lv:anim-groups 解析+序列化 ✓`);
 } else {
 	console.log(`❌ ${failed} 个测试失败`);
 	process.exit(1);

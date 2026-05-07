@@ -57,6 +57,11 @@ export function writeTTML(project) {
             }
         }
 
+        // lv: 动画组
+        if (word.anim_groups && word.anim_groups.length > 0) {
+            span.setAttribute("lv:anim-groups", JSON.stringify(word.anim_groups));
+        }
+
         return span;
     }
 
@@ -216,6 +221,11 @@ export function writeTTML(project) {
                 if (line.style.color !== undefined) {
                     p.setAttribute("lv:color", line.style.color);
                 }
+            }
+
+            // lv: 行动画组
+            if (line.anim_groups && line.anim_groups.length > 0) {
+                p.setAttribute("lv:anim-groups", JSON.stringify(line.anim_groups));
             }
 
             if (dynamic) {

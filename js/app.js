@@ -9,6 +9,7 @@ import { initLyricList } from "./ui/lyric-list.js";
 import { AudioEngine } from "./audio/engine.js";
 import { initPlayback } from "./ui/playback.js";
 import { AnimationRenderer } from "./animation/renderer.js";
+import { initParamPanel } from "./ui/param-panel.js";
 import { bus } from "./utils/events.js";
 
 // ---- 初始化外壳 ----
@@ -24,6 +25,7 @@ const renderer = new AnimationRenderer(shell.previewContent);
 initFileIO(shell.toolbarLeft, shell.statusBar);
 initLyricList(shell.lyricListBox);
 initPlayback(engine);
+initParamPanel(shell.paramPanelBox);
 
 // ---- 音频文件加载 ----
 bus.on("file:audio", ({ file }) => {

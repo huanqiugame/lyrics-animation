@@ -69,6 +69,15 @@ function wordFromElement(word_el) {
 
     if (Object.keys(style).length > 0) word.style = style;
 
+    // lv: 动画组
+    const anim_json = getAttr(word_el, "lv:anim-groups");
+    if (anim_json !== null) {
+        try {
+            const parsed = JSON.parse(anim_json);
+            if (Array.isArray(parsed)) word.anim_groups = parsed;
+        } catch (_) { /* 忽略格式错误的 JSON */ }
+    }
+
     return word;
 }
 
@@ -257,6 +266,15 @@ export function parseTTML(ttml_text) {
             const l_color = getAttr(line_el, "lv:color");
             if (l_color !== null) line_style.color = l_color;
             if (Object.keys(line_style).length > 0) line.style = line_style;
+
+            // 逐行动画组
+            const line_anim = getAttr(line_el, "lv:anim-groups");
+            if (line_anim !== null) {
+                try {
+                    const parsed = JSON.parse(line_anim);
+                    if (Array.isArray(parsed)) line.anim_groups = parsed;
+                } catch (_) { /* 忽略格式错误的 JSON */ }
+            }
 
             // 遍历子节点
             let after_space = false;

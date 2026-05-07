@@ -1,0 +1,401 @@
+/**
+ * 动画组编辑器
+ * 可复用的 UI 组件，用于编辑 AnimationGroup 列表
+ * 支持增删动画组、编辑时间锚点、管理通道
+ *
+ * 用法:
+ *   const editor = createAnimEditor(container);
+ *   editor.load(groups, { word, line });      // 加载数据
+ *   editor.onChange((groups) => { ... });      // 监听变更
+ *   editor.getData();                          // 获取当前数据
+ */
+
+import { h, clear } from "../utils/dom.js";
+import { listChannels } from "../animation/channels.js";
+import { EASING_PRESETS } from "../animation/easing.js";
+
+/**
+ * @typedef {import("../ttml/types.js").AnimationGroup} AnimationGroup
+ * @typedef {import("../ttml/types.js").TimeAnchor} TimeAnchor
+ * @typedef {import("../ttml/types.js").AnimChannel} AnimChannel
+ */
+
+// ---- 下拉选项常量 ----
+
+const ANCHOR_REFS = [
+    ["wordStart", "字开始"],
+    ["wordEnd", "字结束"],
+    ["lineStart", "行开始"],
+    ["lineEnd", "行结束"],
+];
+
+const ANCHOR_DIRS = [
+    ["before", "之前"],
+    ["after", "之后"],
+];
+
+// ---- 编辑器工厂 ----
+
+/**
+ * 创建动画组编辑器实例
+ * @param {HTMLElement} container - 放置编辑器的容器
+ * @returns {{ load: Function, getData: Function, onChange: Function }}
+ */
+export function createAnimEditor(container) {
+    /** @type {AnimationGroup[]} */
+    let groups = [];
+
+    /** @type {Function|null} */
+    let change_callback = null;
+
+    // 预生成通道选项列表
+    const channel_options = buildChannelOptions();
+    const easing_options = buildEasingOptions();
+
+    // ---- 渲染 ----
+
+    function render() {
+        clear(container);
+
+        if (groups.length === 0) {
+            container.appendChild(
+                h("div", { className: "anim-editor-empty" }, "暂无动画组，点击下方按钮添加"),
+            );
+        }
+
+        for (let i = 0; i < groups.length; i++) {
+            container.appendChild(buildGroupCard(i, groups[i]));
+        }
+
+        container.appendChild(
+            h("button", { className: "btn-add-group", type: "button" }, "+ 添加动画组"),
+        ).addEventListener("click", () => {
+            groups.push(createEmptyGroup());
+            notifyChange();
+            render();
+        });
+    }
+
+    // ---- 构建单个动画组卡片 ----
+
+    /**
+     * @param {number} index
+     * @param {AnimationGroup} group
+     * @returns {HTMLElement}
+     */
+    function buildGroupCard(index, group) {
+        const card = h("div", { className: "anim-group-card" });
+
+        // 表头：编号 + 删除按钮
+        const header = h("div", { className: "anim-group-header" },
+            h("span", {}, `动画组 ${index + 1}`),
+            h("button", { className: "btn-icon btn-remove-group", type: "button", title: "删除该组" }, "×"),
+        );
+        header.lastElementChild.addEventListener("click", () => {
+            groups.splice(index, 1);
+            notifyChange();
+            render();
+        });
+
+        // 时间锚点
+        const body = h("div", { className: "anim-group-body" });
+
+        body.appendChild(buildAnchorRow("开始", group.start, (updated) => {
+            group.start = updated;
+            notifyChange();
+        }));
+
+        body.appendChild(buildAnchorRow("结束", group.end, (updated) => {
+            group.end = updated;
+            notifyChange();
+        }));
+
+        // 通道列表
+        const channels_section = h("div", { className: "anim-channels-section" });
+        const channels_header = h("div", { className: "anim-channels-header" },
+            h("span", {}, "通道"),
+            h("button", { className: "btn-icon btn-add-channel", type: "button" }, "+ 添加"),
+        );
+        channels_header.lastElementChild.addEventListener("click", () => {
+            group.channels.push(createEmptyChannel());
+            notifyChange();
+            render();
+        });
+        channels_section.appendChild(channels_header);
+
+        if (group.channels.length === 0) {
+            channels_section.appendChild(
+                h("div", { className: "anim-editor-empty" }, "暂无通道"),
+            );
+        }
+
+        for (let ci = 0; ci < group.channels.length; ci++) {
+            channels_section.appendChild(buildChannelRow(index, ci, group.channels, group));
+        }
+
+        body.appendChild(channels_section);
+        card.appendChild(header);
+        card.appendChild(body);
+        return card;
+    }
+
+    // ---- 时间锚点行 ----
+
+    /**
+     * @param {string} label - "开始" 或 "结束"
+     * @param {TimeAnchor} anchor
+     * @param {Function} on_change
+     * @returns {HTMLElement}
+     */
+    function buildAnchorRow(label, anchor, on_change) {
+        const ref_select = createSelectOptions(anchor.ref, ANCHOR_REFS);
+        const dir_select = createSelectOptions(anchor.dir, ANCHOR_DIRS);
+        const offset_input = h("input", { type: "number", min: 0, value: anchor.offset, className: "anim-offset" });
+        const ms_label = h("span", { className: "anim-unit" }, "ms");
+
+        function emitChange() {
+            on_change({
+                ref: ref_select.value,
+                dir: dir_select.value,
+                offset: Number(offset_input.value) || 0,
+            });
+        }
+
+        ref_select.addEventListener("change", emitChange);
+        dir_select.addEventListener("change", emitChange);
+        offset_input.addEventListener("change", emitChange);
+
+        return h("div", { className: "anim-anchor-row" },
+            h("span", { className: "anim-anchor-label" }, label),
+            ref_select,
+            dir_select,
+            offset_input,
+            ms_label,
+        );
+    }
+
+    // ---- 通道行 ----
+
+    /**
+     * @param {number} group_index
+     * @param {number} channel_index
+     * @param {AnimChannel[]} channels_arr
+     * @param {AnimationGroup} group
+     * @returns {HTMLElement}
+     */
+    function buildChannelRow(group_index, channel_index, channels_arr, group) {
+        const ch = channels_arr[channel_index];
+
+        const ch_select = createSelectOptions(ch.channel_id, channel_options);
+        const from_input = h("input", { type: "text", value: String(ch.from ?? ""), className: "anim-chan-val", placeholder: "从" });
+        const to_input = h("input", { type: "text", value: String(ch.to ?? ""), className: "anim-chan-val", placeholder: "到" });
+        const curve_select = createSelectOptions(ch.curve, easing_options);
+        const remove_btn = h("button", { className: "btn-icon btn-remove-chan", type: "button", title: "删除通道" }, "×");
+
+        function emitChange() {
+            channels_arr[channel_index] = {
+                channel_id: ch_select.value,
+                from: parseValue(ch_select.value, from_input.value),
+                to: parseValue(ch_select.value, to_input.value),
+                curve: curve_select.value,
+            };
+            notifyChange();
+        }
+
+        ch_select.addEventListener("change", () => {
+            // 切换通道时，用该通道的默认值填充 from/to
+            const ch_info = getChannelInfo(ch_select.value);
+            from_input.value = String(ch_info.default_from ?? "");
+            to_input.value = String(ch_info.default_to ?? "");
+            emitChange();
+        });
+        from_input.addEventListener("change", emitChange);
+        to_input.addEventListener("change", emitChange);
+        curve_select.addEventListener("change", emitChange);
+        remove_btn.addEventListener("click", () => {
+            channels_arr.splice(channel_index, 1);
+            notifyChange();
+            render();
+        });
+
+        return h("div", { className: "anim-channel-row" },
+            ch_select,
+            h("span", { className: "anim-chan-label" }, "从"),
+            from_input,
+            h("span", { className: "anim-chan-label" }, "到"),
+            to_input,
+            h("span", { className: "anim-chan-label" }, "曲线"),
+            curve_select,
+            remove_btn,
+        );
+    }
+
+    // ---- 通知变更 ----
+
+    function notifyChange() {
+        if (change_callback) {
+            change_callback(groups);
+        }
+    }
+
+    // ---- 公共 API ----
+
+    return {
+        /**
+         * 加载动画组数据并渲染
+         * @param {AnimationGroup[]} new_groups
+         */
+        load(new_groups) {
+            groups = new_groups;
+            render();
+        },
+
+        /**
+         * 获取当前动画组数据
+         * @returns {AnimationGroup[]}
+         */
+        getData() {
+            return groups;
+        },
+
+        /**
+         * 注册变更回调
+         * @param {Function} cb
+         */
+        onChange(cb) {
+            change_callback = cb;
+        },
+    };
+}
+
+// ==================== 工具函数 ====================
+
+/**
+ * 创建 `<select>` 并设置当前值
+ * @param {string} current
+ * @param {[string, string][]} options - [[value, label], ...]
+ * @returns {HTMLSelectElement}
+ */
+function createSelectOptions(current, options) {
+    const sel = document.createElement("select");
+    for (const [value, label] of options) {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = label;
+        if (value === current) opt.selected = true;
+        sel.appendChild(opt);
+    }
+    return sel;
+}
+
+/**
+ * 生成通道下拉选项
+ * @returns {[string, string][]}
+ */
+function buildChannelOptions() {
+    const channels = listChannels();
+    return channels.map((ch) => [ch.id, ch.label]);
+}
+
+/**
+ * 获取通道信息（含默认值建议）
+ * @param {string} id
+ * @returns {{ default_from: *, default_to: * }}
+ */
+function getChannelInfo(id) {
+    const channels = listChannels();
+    const ch = channels.find((c) => c.id === id);
+    if (!ch) return { default_from: "", default_to: "" };
+    // 根据通道类型给出 from/to 建议
+    switch (id) {
+        case "opacity":
+            return { default_from: 0, default_to: 1 };
+        case "blur":
+            return { default_from: 8, default_to: 0 };
+        case "color":
+        case "backgroundColor":
+        case "borderColor":
+            return { default_from: "#ffffff", default_to: "#000000" };
+        case "textShadow":
+            return { default_from: "none", default_to: "0 0 10px rgba(0,0,0,0.5)" };
+        case "textStroke":
+            return { default_from: "none", default_to: "1px #000" };
+        case "fontWeight":
+            return { default_from: 400, default_to: 700 };
+        case "fontSize":
+            return { default_from: 32, default_to: 48 };
+        case "translateX":
+        case "translateY":
+            return { default_from: 0, default_to: 20 };
+        case "translateZ":
+            return { default_from: 0, default_to: 50 };
+        case "rotateX":
+        case "rotateY":
+        case "rotateZ":
+            return { default_from: 0, default_to: 360 };
+        case "scale":
+            return { default_from: 1, default_to: 1.5 };
+        case "borderWidth":
+            return { default_from: 0, default_to: 2 };
+        case "borderRadius":
+            return { default_from: 0, default_to: 8 };
+        case "zIndex":
+            return { default_from: 1, default_to: 10 };
+        default:
+            return { default_from: ch.defaultValue ?? "", default_to: "" };
+    }
+}
+
+/**
+ * 生成缓动曲线下拉选项
+ * @returns {[string, string][]}
+ */
+function buildEasingOptions() {
+    const opts = [];
+    for (const [id, preset] of EASING_PRESETS) {
+        opts.push([id, preset.label]);
+    }
+    return opts;
+}
+
+/**
+ * 创建空的动画组
+ * @returns {AnimationGroup}
+ */
+function createEmptyGroup() {
+    return {
+        start: { ref: "wordStart", dir: "before", offset: 200 },
+        end: { ref: "wordStart", dir: "after", offset: 0 },
+        channels: [],
+    };
+}
+
+/**
+ * 创建空的通道
+ * @returns {AnimChannel}
+ */
+function createEmptyChannel() {
+    return {
+        channel_id: "opacity",
+        from: 0,
+        to: 1,
+        curve: "linear",
+    };
+}
+
+/**
+ * 尝试解析值（数字保持数字类型）
+ * @param {string} channel_id
+ * @param {string} raw
+ * @returns {*}
+ */
+function parseValue(channel_id, raw) {
+    if (channel_id === "opacity" || channel_id === "blur" || channel_id === "fontWeight" ||
+        channel_id === "fontSize" || channel_id === "scale" || channel_id === "borderWidth" ||
+        channel_id === "borderRadius" || channel_id === "zIndex" ||
+        channel_id.startsWith("translate") || channel_id.startsWith("rotate")) {
+        const num = Number(raw);
+        return isNaN(num) ? raw : num;
+    }
+    return raw;
+}
