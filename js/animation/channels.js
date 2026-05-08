@@ -129,7 +129,16 @@ export const CHANNELS = new Map([
         defaultValue: 1,
         unit: null,
         lerp: lerpNumber,
-        apply: (el, v) => { el.style.opacity = v; },
+        apply: (el, v) => {
+            el.style.opacity = v;
+            // opacity=0 时设置 display:none，元素不占空间
+            // 这样文字对齐时未出现的字不影响布局
+            if (v === 0) {
+                el.style.display = "none";
+            } else {
+                el.style.display = "";
+            }
+        },
     }],
 
     // Blur
@@ -174,6 +183,78 @@ export const CHANNELS = new Map([
     }],
 
     // Text styling
+    ["fontFamily", {
+        id: "fontFamily",
+        label: "字体",
+        cssProperty: "font-family",
+        defaultValue: "system-ui, -apple-system, sans-serif",
+        unit: null,
+        // 字体无法插值，使用 step 方式切换
+        lerp: (from, to, t) => t < 0.5 ? from : to,
+        apply: (el, v) => { el.style.fontFamily = v; },
+    }],
+    ["textAlign", {
+        id: "textAlign",
+        label: "文字对齐",
+        cssProperty: null,  // 特殊处理：同时设置 text-align 和 justify-content
+        defaultValue: "left",
+        unit: null,
+        // 对齐方式无法插值，使用 step 方式切换
+        lerp: (from, to, t) => t < 0.5 ? from : to,
+        apply: (el, v) => {
+            // 设置行元素的 text-align 和 justify-content
+            el.style.textAlign = v;
+            // 根据 textAlign 设置 justify-content
+            const justify_map = {
+                left: "flex-start",
+                center: "center",
+                right: "flex-end",
+                start: "flex-start",
+                end: "flex-end",
+            };
+            el.style.justifyContent = justify_map[v] || "center";
+        },
+    }],
+    // Anchor position (canvas reference point)
+    ["anchorPosition", {
+        id: "anchorPosition",
+        label: "锚点位置",
+        cssProperty: null,  // 特殊处理：影响定位逻辑
+        defaultValue: "center",
+        unit: null,
+        lerp: (from, to, t) => t < 0.5 ? from : to,  // step 切换
+        apply: (el, v) => {
+            // 存储锚点位置供渲染器使用
+            el.__anchorPosition = v;
+        },
+    }],
+    ["anchorOffsetX", {
+        id: "anchorOffsetX",
+        label: "锚点 X 偏移",
+        cssProperty: null,
+        defaultValue: 0,
+        unit: "px",
+        lerp: lerpNumber,
+        apply: (el, v) => { el.__anchorOffsetX = v; },
+    }],
+    ["anchorOffsetY", {
+        id: "anchorOffsetY",
+        label: "锚点 Y 偏移",
+        cssProperty: null,
+        defaultValue: 0,
+        unit: "px",
+        lerp: lerpNumber,
+        apply: (el, v) => { el.__anchorOffsetY = v; },
+    }],
+    ["anchorOffsetZ", {
+        id: "anchorOffsetZ",
+        label: "锚点 Z 偏移",
+        cssProperty: null,
+        defaultValue: 0,
+        unit: "px",
+        lerp: lerpNumber,
+        apply: (el, v) => { el.__anchorOffsetZ = v; },
+    }],
     ["textShadow", {
         id: "textShadow",
         label: "文字阴影",
@@ -217,6 +298,15 @@ export const CHANNELS = new Map([
         unit: "px",
         lerp: lerpNumber,
         apply: (el, v) => { el.style.fontSize = v + "px"; },
+    }],
+    ["lineHeight", {
+        id: "lineHeight",
+        label: "行高",
+        cssProperty: "line-height",
+        defaultValue: 1.5,
+        unit: null,
+        lerp: lerpNumber,
+        apply: (el, v) => { el.style.lineHeight = v; },
     }],
 
     // Border

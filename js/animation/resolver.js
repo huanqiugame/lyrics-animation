@@ -21,6 +21,18 @@ export function resolveTime(anchor, word, line) {
         lineEnd: line.end_time,
     };
     const base = base_times[anchor.ref] || 0;
+
+    // 支持无限大 offset：null 或 Infinity 表示正/负无限
+    // - null 且 dir === 'before' → 负无限
+    // - null 且 dir === 'after' → 正无限
+    // - Infinity → 正无限
+    // - -Infinity → 负无限
+    if (anchor.offset === null) {
+        return anchor.dir === "before" ? -Infinity : Infinity;
+    }
+    if (anchor.offset === Infinity) return Infinity;
+    if (anchor.offset === -Infinity) return -Infinity;
+
     return anchor.dir === "before" ? base - anchor.offset : base + anchor.offset;
 }
 
@@ -56,7 +68,19 @@ export function evaluateGroup(group, t, word, line) {
     }
 
     const duration = window.end - window.start;
-    if (duration <= 0) {
+
+    // 无限时间窗口（如 -∞ ~ +∞）：始终在窗口内，progress = 0.5 保持稳定值
+    // 有限但零宽度窗口：跳过
+    if (!isFinite(duration) || duration <= 0) {
+        if (!isFinite(window.start) || !isFinite(window.end)) {
+            // 无限窗口：使用 progress = 0.5，from 和 to 相同时 lerp 仍返回相同值
+            for (const channel of group.channels) {
+                const channel_def = getChannel(channel.channel_id);
+                if (!channel_def) continue;
+                const value = channel_def.lerp(channel.from, channel.to, 0.5);
+                result.set(channel.channel_id, value);
+            }
+        }
         return result;
     }
 

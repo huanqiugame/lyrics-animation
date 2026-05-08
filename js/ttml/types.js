@@ -6,18 +6,73 @@
 // ---- 默认值 ----
 
 export const DEFAULTS = {
-    blur_start_amount: 8,       // px
-    blur_end_amount: 0,         // px
-    blur_duration: "word",      // 'word' | 'line'
-    scroll_distance: 20,        // vh
-    scroll_direction: "up",     // 'up' | 'down'
-    scroll_easing: "ease-out",
-    font_family: "PingFang SC, Microsoft YaHei, sans-serif",
-    font_size: 48,              // px
+    font_family: "system-ui, -apple-system, sans-serif",
+    font_size: 32,              // px
     text_color: "#ffffff",
-    text_shadow: "0 0 10px rgba(0,0,0,0.5)",
+    text_shadow: "none",
     text_stroke: "none",
 };
+
+/**
+ * 创建默认的全局字动画组
+ * 包含基础样式（覆盖整个时间线）+ 出现/消失动画
+ * @returns {import('./types.js').AnimationGroup[]}
+ */
+function createDefaultWordAnimGroups() {
+    return [
+        // 基础样式组：覆盖整个时间线，设置默认字体、颜色等 + 默认不可见（opacity=0）
+        {
+            start: { ref: "wordStart", dir: "before", offset: null },  // -∞
+            end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
+            channels: [
+                { channel_id: "fontFamily", from: DEFAULTS.font_family, to: DEFAULTS.font_family, curve: "linear" },
+                { channel_id: "fontSize", from: DEFAULTS.font_size, to: DEFAULTS.font_size, curve: "linear" },
+                { channel_id: "color", from: DEFAULTS.text_color, to: DEFAULTS.text_color, curve: "linear" },
+                { channel_id: "textShadow", from: DEFAULTS.text_shadow, to: DEFAULTS.text_shadow, curve: "linear" },
+                { channel_id: "textStroke", from: DEFAULTS.text_stroke, to: DEFAULTS.text_stroke, curve: "linear" },
+                { channel_id: "opacity", from: 0, to: 0, curve: "linear" },
+            ],
+        },
+        // 出现动画：在 wordStart ~ lineEnd 期间，opacity=1（覆盖基础样式的 opacity=0）
+        // from=1, to=1 意味着整个期间 opacity 始终为 1
+        {
+            start: { ref: "wordStart", dir: "before", offset: 0 },
+            end: { ref: "lineEnd", dir: "after", offset: 0 },
+            channels: [
+                { channel_id: "opacity", from: 1, to: 1, curve: "linear" },
+            ],
+        },
+    ];
+}
+
+/**
+ * 创建默认的全局行动画组
+ * 设置文字对齐方式 + 锚点位置（画布左侧 + X偏移20px）
+ * @returns {import('./types.js').AnimationGroup[]}
+ */
+function createDefaultLineAnimGroups() {
+    return [
+        // 基础行样式：文字左对齐
+        {
+            start: { ref: "lineStart", dir: "before", offset: null },  // -∞
+            end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
+            channels: [
+                { channel_id: "textAlign", from: "left", to: "left", curve: "linear" },
+            ],
+        },
+        // 锚点定位：画布左侧 + X偏移20px
+        {
+            start: { ref: "lineStart", dir: "before", offset: null },  // -∞
+            end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
+            channels: [
+                { channel_id: "anchorPosition", from: "left", to: "left", curve: "linear" },
+                { channel_id: "anchorOffsetX", from: 20, to: 20, curve: "linear" },
+                { channel_id: "anchorOffsetY", from: 0, to: 0, curve: "linear" },
+                { channel_id: "anchorOffsetZ", from: 0, to: 0, curve: "linear" },
+            ],
+        },
+    ];
+}
 
 // ---- 工厂函数 ----
 
@@ -61,27 +116,8 @@ export function createLyricLine() {
  */
 export function createDefaultConfig() {
     return {
-        blur: {
-            enabled: true,
-            start_amount: DEFAULTS.blur_start_amount,
-            end_amount: DEFAULTS.blur_end_amount,
-            duration: DEFAULTS.blur_duration,
-        },
-        scroll: {
-            enabled: true,
-            direction: DEFAULTS.scroll_direction,
-            distance: DEFAULTS.scroll_distance,
-            easing: DEFAULTS.scroll_easing,
-        },
-        text: {
-            font_family: DEFAULTS.font_family,
-            font_size: DEFAULTS.font_size,
-            color: DEFAULTS.text_color,
-            text_shadow: DEFAULTS.text_shadow,
-            stroke: DEFAULTS.text_stroke,
-        },
-        line_anim_groups: [],
-        word_anim_groups: [],
+        word_anim_groups: createDefaultWordAnimGroups(),
+        line_anim_groups: createDefaultLineAnimGroups(),
     };
 }
 
@@ -208,9 +244,6 @@ export function createEmptyProject() {
 
 /**
  * @typedef {object} AnimationConfig
- * @property {{enabled: boolean, start_amount: number, end_amount: number, duration: string}} blur
- * @property {{enabled: boolean, direction: string, distance: number, easing: string}} scroll
- * @property {{font_family: string, font_size: number, color: string, text_shadow: string, stroke: string}} text
  * @property {AnimationGroup[]} line_anim_groups - 全局行动画组
  * @property {AnimationGroup[]} word_anim_groups - 全局字动画组
  */
