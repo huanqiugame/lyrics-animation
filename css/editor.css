@@ -765,10 +765,21 @@
     display: none;
 }
 
-/* 通道区块折叠：隐藏通道行和空提示 */
-.anim-channels-section.collapsed .anim-channel-row,
-.anim-channels-section.collapsed .anim-editor-empty {
+/* 单通道折叠：隐藏所有控件，仅保留拖拽手柄+折叠按钮+通道名 */
+.anim-channel-row.collapsed select,
+.anim-channel-row.collapsed .anim-chan-label,
+.anim-channel-row.collapsed .anim-chan-val,
+.anim-channel-row.collapsed .btn-icon {
     display: none;
+}
+.anim-channel-row .chan-name {
+    display: none;
+}
+.anim-channel-row.collapsed .chan-name {
+    display: inline;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
 }
 
 /* 标题中的操作按钮组（右对齐） */

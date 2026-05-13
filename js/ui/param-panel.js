@@ -58,8 +58,9 @@ export function initParamPanel(container) {
         return actions;
     }
 
+    const line_title_text = h("span", {}, "全局行动画组");
     const line_title = h("div", { className: "param-section-title" },
-        h("span", {}, "全局行动画组"),
+        line_title_text,
         makeCollapseButtons(line_editor, line_editor_box),
     );
     const line_anim_section = h("div", { className: "param-section" },
@@ -80,8 +81,9 @@ export function initParamPanel(container) {
         }
     });
 
+    const word_title_text = h("span", {}, "全局字动画组");
     const word_title = h("div", { className: "param-section-title" },
-        h("span", {}, "全局字动画组"),
+        word_title_text,
         makeCollapseButtons(word_editor, word_editor_box),
     );
     const word_anim_section = h("div", { className: "param-section" },
@@ -93,11 +95,11 @@ export function initParamPanel(container) {
     container.appendChild(line_anim_section);
     container.appendChild(word_anim_section);
 
-    // 存引用供 updateEditorMode 使用
+    // 存引用供 updateEditorMode 使用（仅文字 span，避免替换掉折叠按钮）
     els.lineEditor = line_editor;
     els.wordEditor = word_editor;
-    els.lineTitle = line_title;
-    els.wordTitle = word_title;
+    els.lineTitle = line_title_text;
+    els.wordTitle = word_title_text;
 
     // ---- 事件绑定 ----
     bus.on("lyrics:loaded", (p) => {

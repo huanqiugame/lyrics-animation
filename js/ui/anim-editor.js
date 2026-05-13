@@ -119,9 +119,7 @@ export function createAnimEditor(container) {
 
         // 通道列表
         const channels_section = h("div", { className: "anim-channels-section" });
-        const collapse_channels_btn = h("span", { className: "collapse-icon" }, "▼");
         const channels_header = h("div", { className: "anim-channels-header" },
-            collapse_channels_btn,
             h("span", {}, "通道"),
             h("button", { className: "btn-icon btn-add-channel", type: "button" }, "+ 添加"),
         );
@@ -129,10 +127,6 @@ export function createAnimEditor(container) {
             group.channels.push(createEmptyChannel());
             notifyChange();
             render();
-        });
-        collapse_channels_btn.addEventListener("click", () => {
-            channels_section.classList.toggle("collapsed");
-            collapse_channels_btn.textContent = channels_section.classList.contains("collapsed") ? "▶" : "▼";
         });
         channels_section.appendChild(channels_header);
 
@@ -200,6 +194,16 @@ export function createAnimEditor(container) {
     function buildChannelRow(group_index, channel_index, channels_arr, group) {
         const ch = channels_arr[channel_index];
 
+        // 为折叠显示查找通道中文名
+        const ch_label = (() => {
+            for (const [val, label] of channel_options) {
+                if (val === ch.channel_id) return label;
+            }
+            return ch.channel_id;
+        })();
+
+        const collapse_chan_btn = h("span", { className: "collapse-icon" }, "▼");
+        const chan_name = h("span", { className: "chan-name" }, ch_label);
         const ch_select = createSelectOptions(ch.channel_id, channel_options);
         const from_input = h("input", { type: "text", value: String(ch.from ?? ""), className: "anim-chan-val", placeholder: "从" });
         const to_input = h("input", { type: "text", value: String(ch.to ?? ""), className: "anim-chan-val", placeholder: "到" });
@@ -221,6 +225,10 @@ export function createAnimEditor(container) {
             const ch_info = getChannelInfo(ch_select.value);
             from_input.value = String(ch_info.default_from ?? "");
             to_input.value = String(ch_info.default_to ?? "");
+            // 同时更新折叠时的显示名
+            for (const [val, label] of channel_options) {
+                if (val === ch_select.value) { chan_name.textContent = label; break; }
+            }
             emitChange();
         });
         from_input.addEventListener("change", emitChange);
@@ -232,8 +240,15 @@ export function createAnimEditor(container) {
             render();
         });
 
+        collapse_chan_btn.addEventListener("click", () => {
+            row.classList.toggle("collapsed");
+            collapse_chan_btn.textContent = row.classList.contains("collapsed") ? "▶" : "▼";
+        });
+
         const row = h("div", { className: "anim-channel-row" },
             h("span", { className: "drag-handle" }, "⠿"),
+            collapse_chan_btn,
+            chan_name,
             ch_select,
             h("span", { className: "anim-chan-label" }, "从"),
             from_input,
@@ -403,16 +418,30 @@ export function createAnimEditor(container) {
 
         /** 折叠全部动画组和通道 */
         collapseAll() {
-            container.querySelectorAll(".anim-group-card").forEach(c => c.classList.add("collapsed"));
-            container.querySelectorAll(".anim-channels-section").forEach(s => s.classList.add("collapsed"));
-            container.querySelectorAll(".collapse-icon").forEach(icon => { icon.textContent = "▶"; });
+            container.querySelectorAll(".anim-group-card").forEach(c => {
+                c.classList.add("collapsed");
+                const icon = c.querySelector(".anim-group-header .collapse-icon");
+                if (icon) icon.textContent = "▶";
+            });
+            container.querySelectorAll(".anim-channel-row").forEach(r => {
+                r.classList.add("collapsed");
+                const icon = r.querySelector(".collapse-icon");
+                if (icon) icon.textContent = "▶";
+            });
         },
 
         /** 展开全部动画组和通道 */
         expandAll() {
-            container.querySelectorAll(".anim-group-card").forEach(c => c.classList.remove("collapsed"));
-            container.querySelectorAll(".anim-channels-section").forEach(s => s.classList.remove("collapsed"));
-            container.querySelectorAll(".collapse-icon").forEach(icon => { icon.textContent = "▼"; });
+            container.querySelectorAll(".anim-group-card").forEach(c => {
+                c.classList.remove("collapsed");
+                const icon = c.querySelector(".anim-group-header .collapse-icon");
+                if (icon) icon.textContent = "▼";
+            });
+            container.querySelectorAll(".anim-channel-row").forEach(r => {
+                r.classList.remove("collapsed");
+                const icon = r.querySelector(".collapse-icon");
+                if (icon) icon.textContent = "▼";
+            });
         },
     };
 }
