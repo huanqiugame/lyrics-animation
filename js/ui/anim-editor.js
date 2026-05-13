@@ -86,9 +86,11 @@ export function createAnimEditor(container) {
     function buildGroupCard(index, group) {
         const card = h("div", { className: "anim-group-card" });
 
-        // 表头：拖拽手柄 + 编号 + 删除按钮
+        // 表头：拖拽手柄 + 折叠按钮 + 编号 + 删除按钮
+        const collapse_group_btn = h("span", { className: "collapse-icon" }, "▼");
         const header = h("div", { className: "anim-group-header" },
             h("span", { className: "drag-handle" }, "⠿"),
+            collapse_group_btn,
             h("span", {}, `动画组 ${index + 1}`),
             h("button", { className: "btn-icon btn-remove-group", type: "button", title: "删除该组" }, "×"),
         );
@@ -96,6 +98,10 @@ export function createAnimEditor(container) {
             groups.splice(index, 1);
             notifyChange();
             render();
+        });
+        collapse_group_btn.addEventListener("click", () => {
+            card.classList.toggle("collapsed");
+            collapse_group_btn.textContent = card.classList.contains("collapsed") ? "▶" : "▼";
         });
 
         // 时间锚点
@@ -113,7 +119,9 @@ export function createAnimEditor(container) {
 
         // 通道列表
         const channels_section = h("div", { className: "anim-channels-section" });
+        const collapse_channels_btn = h("span", { className: "collapse-icon" }, "▼");
         const channels_header = h("div", { className: "anim-channels-header" },
+            collapse_channels_btn,
             h("span", {}, "通道"),
             h("button", { className: "btn-icon btn-add-channel", type: "button" }, "+ 添加"),
         );
@@ -121,6 +129,10 @@ export function createAnimEditor(container) {
             group.channels.push(createEmptyChannel());
             notifyChange();
             render();
+        });
+        collapse_channels_btn.addEventListener("click", () => {
+            channels_section.classList.toggle("collapsed");
+            collapse_channels_btn.textContent = channels_section.classList.contains("collapsed") ? "▶" : "▼";
         });
         channels_section.appendChild(channels_header);
 
@@ -387,6 +399,20 @@ export function createAnimEditor(container) {
          */
         onChange(cb) {
             change_callback = cb;
+        },
+
+        /** 折叠全部动画组和通道 */
+        collapseAll() {
+            container.querySelectorAll(".anim-group-card").forEach(c => c.classList.add("collapsed"));
+            container.querySelectorAll(".anim-channels-section").forEach(s => s.classList.add("collapsed"));
+            container.querySelectorAll(".collapse-icon").forEach(icon => { icon.textContent = "▶"; });
+        },
+
+        /** 展开全部动画组和通道 */
+        expandAll() {
+            container.querySelectorAll(".anim-group-card").forEach(c => c.classList.remove("collapsed"));
+            container.querySelectorAll(".anim-channels-section").forEach(s => s.classList.remove("collapsed"));
+            container.querySelectorAll(".collapse-icon").forEach(icon => { icon.textContent = "▼"; });
         },
     };
 }

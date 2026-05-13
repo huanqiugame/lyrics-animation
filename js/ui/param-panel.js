@@ -46,7 +46,22 @@ export function initParamPanel(container) {
         }
     });
 
-    const line_title = h("div", { className: "param-section-title" }, "全局行动画组");
+    // ---- 行动画组: 展开/折叠全部按钮 ----
+    function makeCollapseButtons(editor, container_box) {
+        const actions = h("span", { className: "title-actions" });
+        const collapse_btn = h("button", { className: "btn-icon", type: "button" }, "折叠全部");
+        const expand_btn = h("button", { className: "btn-icon", type: "button" }, "展开全部");
+        collapse_btn.addEventListener("click", () => editor.collapseAll());
+        expand_btn.addEventListener("click", () => editor.expandAll());
+        actions.appendChild(collapse_btn);
+        actions.appendChild(expand_btn);
+        return actions;
+    }
+
+    const line_title = h("div", { className: "param-section-title" },
+        h("span", {}, "全局行动画组"),
+        makeCollapseButtons(line_editor, line_editor_box),
+    );
     const line_anim_section = h("div", { className: "param-section" },
         line_title,
         line_editor_box,
@@ -65,7 +80,10 @@ export function initParamPanel(container) {
         }
     });
 
-    const word_title = h("div", { className: "param-section-title" }, "全局字动画组");
+    const word_title = h("div", { className: "param-section-title" },
+        h("span", {}, "全局字动画组"),
+        makeCollapseButtons(word_editor, word_editor_box),
+    );
     const word_anim_section = h("div", { className: "param-section" },
         word_title,
         word_editor_box,

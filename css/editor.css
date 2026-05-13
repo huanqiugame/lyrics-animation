@@ -745,3 +745,35 @@
 .anim-channel-row.drag-over {
     border-top: 2px solid var(--accent) !important;
 }
+
+/* ===== 折叠/展开 ===== */
+.collapse-icon {
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.55rem;
+    padding: 0 4px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    transition: color 0.1s;
+}
+.collapse-icon:hover {
+    color: var(--text);
+}
+
+/* 组卡片折叠：隐藏 body */
+.anim-group-card.collapsed .anim-group-body {
+    display: none;
+}
+
+/* 通道区块折叠：隐藏通道行和空提示 */
+.anim-channels-section.collapsed .anim-channel-row,
+.anim-channels-section.collapsed .anim-editor-empty {
+    display: none;
+}
+
+/* 标题中的操作按钮组（右对齐） */
+.title-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+}
