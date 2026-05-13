@@ -7,6 +7,26 @@ import { evaluateEasing } from "./easing.js";
 import { getChannel } from "./channels.js";
 
 /**
+ * 硬编码默认动画组（最终回退层）
+ * 仅在没有任意动画组提供某通道值时生效
+ * 从 -∞ 到 +∞ 始终有效，所有通道使用 from=to 保持恒定值
+ */
+const HARDCODED_DEFAULTS = [
+    {
+        start: { ref: "wordStart", dir: "before", offset: null },  // -∞
+        end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
+        channels: [
+            { channel_id: "fontFamily", from: "system-ui, -apple-system, sans-serif", to: "system-ui, -apple-system, sans-serif", curve: "linear" },
+            { channel_id: "fontSize", from: 32, to: 32, curve: "linear" },
+            { channel_id: "color", from: "#ffffff", to: "#ffffff", curve: "linear" },
+            { channel_id: "textShadow", from: "none", to: "none", curve: "linear" },
+            { channel_id: "textStroke", from: "none", to: "none", curve: "linear" },
+            { channel_id: "opacity", from: 0, to: 0, curve: "linear" },
+        ],
+    },
+];
+
+/**
  * 解析时间锚点为绝对时间
  * @param {import('../ttml/types.js').TimeAnchor} anchor - 时间锚点
  * @param {import('../ttml/types.js').LyricWord} word - 当前字
@@ -74,7 +94,9 @@ export function evaluateGroup(group, t, word, line) {
     if (!isFinite(duration) || duration <= 0) {
         if (!isFinite(window.start) || !isFinite(window.end)) {
             // 无限窗口：使用 progress = 0.5，from 和 to 相同时 lerp 仍返回相同值
-            for (const channel of group.channels) {
+            // 逆序遍历：通道列表中靠上的（索引小）优先级高，后执行覆盖前执行
+            for (let ci = group.channels.length - 1; ci >= 0; ci--) {
+                const channel = group.channels[ci];
                 const channel_def = getChannel(channel.channel_id);
                 if (!channel_def) continue;
                 const value = channel_def.lerp(channel.from, channel.to, 0.5);
@@ -86,8 +108,9 @@ export function evaluateGroup(group, t, word, line) {
 
     const progress = (t - window.start) / duration;
 
-    // 评估每个通道
-    for (const channel of group.channels) {
+    // 评估每个通道（逆序：靠上的通道优先级高）
+    for (let ci = group.channels.length - 1; ci >= 0; ci--) {
+        const channel = group.channels[ci];
         const channel_def = getChannel(channel.channel_id);
         if (!channel_def) continue;
 
@@ -124,8 +147,9 @@ export function computeTimeWindow(word, line, anim_groups) {
 
 /**
  * 解析字的动画样式
- * 仅返回被动画组修改的通道值，无动画组时返回空 Map
- * 基础样式由渲染器直接应用
+ * 从最低优先级开始逐层叠加，高优先级覆盖低优先级的同名通道值。
+ * 优先级（低→高）：
+ *   硬编码默认值 → 全局行动画组 → 全局字动画组 → 行内行动画组 → 行内字动画组
  *
  * @param {number} t - 当前时间（毫秒）
  * @param {import('../ttml/types.js').LyricLine} line - 当前行
@@ -136,26 +160,52 @@ export function computeTimeWindow(word, line, anim_groups) {
 export function resolveWord(t, line, word, config) {
     const result = new Map();
 
-    // 1. 确定使用哪个动画组列表
-    let anim_groups = [];
-    if (word.anim_groups && word.anim_groups.length > 0) {
-        anim_groups = word.anim_groups;
-    } else if (line.anim_groups && line.anim_groups.length > 0) {
-        anim_groups = line.anim_groups;
-    } else if (config && config.word_anim_groups && config.word_anim_groups.length > 0) {
-        anim_groups = config.word_anim_groups;
-    } else if (config && config.line_anim_groups && config.line_anim_groups.length > 0) {
-        anim_groups = config.line_anim_groups;
-    }
-
-    // 2. 无动画组时返回空（基础样式由渲染器处理）
-    if (anim_groups.length === 0) return result;
-
-    // 3. 评估所有动画组，叠加结果（后组覆盖前组）
-    for (const group of anim_groups) {
+    // 层 1: 硬编码默认值（始终有效，最低优先级 — 最终回退）
+    for (const group of HARDCODED_DEFAULTS) {
         const group_result = evaluateGroup(group, t, word, line);
         for (const [channel_id, value] of group_result) {
             result.set(channel_id, value);
+        }
+    }
+
+    // 层 2: 全局行动画组（config.line_anim_groups）
+    // 逆序遍历：靠上的组（索引小）优先级高，后执行覆盖前执行
+    if (config && config.line_anim_groups) {
+        for (let gi = config.line_anim_groups.length - 1; gi >= 0; gi--) {
+            const group_result = evaluateGroup(config.line_anim_groups[gi], t, word, line);
+            for (const [channel_id, value] of group_result) {
+                result.set(channel_id, value);
+            }
+        }
+    }
+
+    // 层 3: 全局字动画组（config.word_anim_groups）
+    if (config && config.word_anim_groups) {
+        for (let gi = config.word_anim_groups.length - 1; gi >= 0; gi--) {
+            const group_result = evaluateGroup(config.word_anim_groups[gi], t, word, line);
+            for (const [channel_id, value] of group_result) {
+                result.set(channel_id, value);
+            }
+        }
+    }
+
+    // 层 4: 行内行动画组
+    if (line.anim_groups && line.anim_groups.length > 0) {
+        for (let gi = line.anim_groups.length - 1; gi >= 0; gi--) {
+            const group_result = evaluateGroup(line.anim_groups[gi], t, word, line);
+            for (const [channel_id, value] of group_result) {
+                result.set(channel_id, value);
+            }
+        }
+    }
+
+    // 层 5: 行内字动画组（最高优先级）
+    if (word.anim_groups && word.anim_groups.length > 0) {
+        for (let gi = word.anim_groups.length - 1; gi >= 0; gi--) {
+            const group_result = evaluateGroup(word.anim_groups[gi], t, word, line);
+            for (const [channel_id, value] of group_result) {
+                result.set(channel_id, value);
+            }
         }
     }
 

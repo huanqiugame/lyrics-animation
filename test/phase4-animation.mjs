@@ -153,9 +153,11 @@ const word_simple = { start_time: 1000, end_time: 2000, anim_groups: [] };
 const line_simple = { start_time: 500, end_time: 3000, anim_groups: [] };
 const config_simple = { line_anim_groups: [], word_anim_groups: [] };
 
-// 无动画组时返回空（基础样式由渲染器处理）
+// 无动画组时返回硬编码默认值（最终回退层）
 const result_simple = resolveWord(1500, line_simple, word_simple, config_simple);
-check(result_simple.size === 0, "无动画组时返回空 Map");
+check(result_simple.get("opacity") === 0, "无动画组时 opacity = 0（硬编码默认）");
+check(result_simple.get("fontSize") === 32, "无动画组时 fontSize = 32（硬编码默认）");
+check(result_simple.get("color") === "#ffffff", "无动画组时 color = #ffffff（硬编码默认）");
 
 // 有动画组时返回值
 const word_with_opacity = {

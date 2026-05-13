@@ -86,8 +86,9 @@ export function createAnimEditor(container) {
     function buildGroupCard(index, group) {
         const card = h("div", { className: "anim-group-card" });
 
-        // 表头：编号 + 删除按钮
+        // 表头：拖拽手柄 + 编号 + 删除按钮
         const header = h("div", { className: "anim-group-header" },
+            h("span", { className: "drag-handle" }, "⠿"),
             h("span", {}, `动画组 ${index + 1}`),
             h("button", { className: "btn-icon btn-remove-group", type: "button", title: "删除该组" }, "×"),
         );
@@ -136,6 +137,7 @@ export function createAnimEditor(container) {
         body.appendChild(channels_section);
         card.appendChild(header);
         card.appendChild(body);
+        makeGroupDraggable(card, index);
         return card;
     }
 
@@ -218,7 +220,8 @@ export function createAnimEditor(container) {
             render();
         });
 
-        return h("div", { className: "anim-channel-row" },
+        const row = h("div", { className: "anim-channel-row" },
+            h("span", { className: "drag-handle" }, "⠿"),
             ch_select,
             h("span", { className: "anim-chan-label" }, "从"),
             from_input,
@@ -228,6 +231,8 @@ export function createAnimEditor(container) {
             curve_select,
             remove_btn,
         );
+        makeChannelRowDraggable(row, channel_index, channels_arr, group_index);
+        return row;
     }
 
     // ---- 通知变更 ----
@@ -238,6 +243,124 @@ export function createAnimEditor(container) {
         }
     }
 
+
+    // ---- 拖拽排序 ----
+
+    /**
+     * 检查 dataTransfer 中是否包含指定 MIME 类型
+     * 用于在 dragenter/dragover 中区分组拖拽和通道拖拽
+     */
+    function hasDragType(e, mime) {
+        const types = e.dataTransfer && e.dataTransfer.types;
+        return types && Array.from(types).indexOf(mime) !== -1;
+    }
+
+    /**
+     * 为组卡片添加拖拽排序能力
+     * 越靠上（索引小）优先级越高
+     * 使用独立 MIME 类型 text/x-anim-group 与通道拖拽隔离
+     */
+    function makeGroupDraggable(card, index) {
+        card.draggable = true;
+
+        card.addEventListener("dragstart", (e) => {
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/x-anim-group", String(index));
+            card.classList.add("dragging");
+        });
+
+        card.addEventListener("dragend", () => {
+            card.classList.remove("dragging");
+            document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+        });
+
+        card.addEventListener("dragenter", (e) => {
+            if (hasDragType(e, "text/x-anim-group")) {
+                card.classList.add("drag-over");
+            }
+        });
+
+        card.addEventListener("dragover", (e) => {
+            if (hasDragType(e, "text/x-anim-group")) {
+                e.preventDefault();
+            }
+        });
+
+        card.addEventListener("dragleave", () => {
+            card.classList.remove("drag-over");
+        });
+
+        card.addEventListener("drop", (e) => {
+            e.preventDefault();
+            card.classList.remove("drag-over");
+            const raw = e.dataTransfer.getData("text/x-anim-group");
+            if (raw === "") return;
+            const from_idx = parseInt(raw);
+            if (from_idx === index) return;
+
+            const [moved] = groups.splice(from_idx, 1);
+            const adjusted = from_idx < index ? index - 1 : index;
+            groups.splice(adjusted, 0, moved);
+            notifyChange();
+            render();
+        });
+    }
+
+    /**
+     * 为通道行添加拖拽排序能力
+     * 使用独立 MIME 类型 text/x-anim-channel 与组拖拽隔离
+     * 仅允许同组内的通道重排
+     */
+    function makeChannelRowDraggable(row, channel_index, channels_arr, group_index) {
+        row.draggable = true;
+
+        row.addEventListener("dragstart", (e) => {
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/x-anim-channel", group_index + ":" + channel_index);
+            row.classList.add("dragging");
+        });
+
+        row.addEventListener("dragend", () => {
+            row.classList.remove("dragging");
+            document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+        });
+
+        row.addEventListener("dragenter", (e) => {
+            if (hasDragType(e, "text/x-anim-channel")) {
+                row.classList.add("drag-over");
+            }
+        });
+
+        row.addEventListener("dragover", (e) => {
+            if (hasDragType(e, "text/x-anim-channel")) {
+                e.preventDefault();
+            }
+        });
+
+        row.addEventListener("dragleave", () => {
+            row.classList.remove("drag-over");
+        });
+
+        row.addEventListener("drop", (e) => {
+            e.preventDefault();
+            row.classList.remove("drag-over");
+            const raw = e.dataTransfer.getData("text/x-anim-channel");
+            if (raw === "") return;
+            const parts = raw.split(":");
+            if (parts.length !== 2) return;
+            const src_group = parseInt(parts[0]);
+            const src_ch = parseInt(parts[1]);
+            // 仅同组通道可重排
+            if (src_group !== group_index) return;
+            if (src_ch === channel_index) return;
+
+            const [moved] = channels_arr.splice(src_ch, 1);
+            const adjusted = src_ch < channel_index ? channel_index - 1 : channel_index;
+            channels_arr.splice(adjusted, 0, moved);
+            notifyChange();
+            render();
+        });
+    }
     // ---- 公共 API ----
 
     return {

@@ -110,17 +110,17 @@ section("4. 默认配置锚点设置");
 const default_config = createDefaultConfig();
 check(default_config.line_anim_groups.length === 2, "默认有 2 个行动画组");
 
-// 第一个动画组：textAlign
-const align_group = default_config.line_anim_groups[0];
-check(align_group.channels[0].channel_id === "textAlign", "第一个动画组有 textAlign");
-check(align_group.channels[0].from === "left", "textAlign = left");
-
-// 第二个动画组：锚点定位
-const anchor_group = default_config.line_anim_groups[1];
-check(anchor_group.channels[0].channel_id === "anchorPosition", "第二个动画组有 anchorPosition");
+// 第一动画组（最高优先级）：锚点定位
+const anchor_group = default_config.line_anim_groups[0];
+check(anchor_group.channels[0].channel_id === "anchorPosition", "第一动画组有 anchorPosition");
 check(anchor_group.channels[0].from === "left", "anchorPosition = left (画布左侧)");
-check(anchor_group.channels[1].channel_id === "anchorOffsetX", "第二个动画组有 anchorOffsetX");
+check(anchor_group.channels[1].channel_id === "anchorOffsetX", "第一动画组有 anchorOffsetX");
 check(anchor_group.channels[1].from === 20, "anchorOffsetX = 20");
+
+// 第二动画组：textAlign
+const align_group = default_config.line_anim_groups[1];
+check(align_group.channels[0].channel_id === "textAlign", "第二动画组有 textAlign");
+check(align_group.channels[0].from === "left", "textAlign = left");
 
 // ==================== 测试 5: 渲染器锚点定位 ====================
 section("5. 渲染器锚点定位");

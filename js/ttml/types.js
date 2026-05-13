@@ -20,7 +20,17 @@ export const DEFAULTS = {
  */
 function createDefaultWordAnimGroups() {
     return [
-        // 基础样式组：覆盖整个时间线，设置默认字体、颜色等 + 默认不可见（opacity=0）
+        // 出现动画（第一=最高优先级）：在 wordStart ~ lineEnd 期间，opacity=1
+        // from=1, to=1 意味着整个期间 opacity 始终为 1
+        {
+            start: { ref: "wordStart", dir: "before", offset: 0 },
+            end: { ref: "lineEnd", dir: "after", offset: 0 },
+            channels: [
+                { channel_id: "opacity", from: 1, to: 1, curve: "linear" },
+            ],
+        },
+        // 基础样式组（第二=较低优先级）：-∞ ~ +∞，默认字体、颜色等 + 默认不可见（opacity=0）
+        // 仅在出现组未激活时（字开始前 / 行结束后）生效
         {
             start: { ref: "wordStart", dir: "before", offset: null },  // -∞
             end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
@@ -33,15 +43,6 @@ function createDefaultWordAnimGroups() {
                 { channel_id: "opacity", from: 0, to: 0, curve: "linear" },
             ],
         },
-        // 出现动画：在 wordStart ~ lineEnd 期间，opacity=1（覆盖基础样式的 opacity=0）
-        // from=1, to=1 意味着整个期间 opacity 始终为 1
-        {
-            start: { ref: "wordStart", dir: "before", offset: 0 },
-            end: { ref: "lineEnd", dir: "after", offset: 0 },
-            channels: [
-                { channel_id: "opacity", from: 1, to: 1, curve: "linear" },
-            ],
-        },
     ];
 }
 
@@ -52,15 +53,7 @@ function createDefaultWordAnimGroups() {
  */
 function createDefaultLineAnimGroups() {
     return [
-        // 基础行样式：文字左对齐
-        {
-            start: { ref: "lineStart", dir: "before", offset: null },  // -∞
-            end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
-            channels: [
-                { channel_id: "textAlign", from: "left", to: "left", curve: "linear" },
-            ],
-        },
-        // 锚点定位：画布左侧 + X偏移20px
+        // 锚点定位（第一=最高优先级）：画布左侧 + X偏移20px
         {
             start: { ref: "lineStart", dir: "before", offset: null },  // -∞
             end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
@@ -69,6 +62,14 @@ function createDefaultLineAnimGroups() {
                 { channel_id: "anchorOffsetX", from: 20, to: 20, curve: "linear" },
                 { channel_id: "anchorOffsetY", from: 0, to: 0, curve: "linear" },
                 { channel_id: "anchorOffsetZ", from: 0, to: 0, curve: "linear" },
+            ],
+        },
+        // 基础行样式（第二）：文字左对齐
+        {
+            start: { ref: "lineStart", dir: "before", offset: null },  // -∞
+            end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
+            channels: [
+                { channel_id: "textAlign", from: "left", to: "left", curve: "linear" },
             ],
         },
     ];
@@ -108,6 +109,16 @@ export function createLyricLine() {
         style_ref: null,
         region_id: null,
         anim_groups: [],
+    };
+}
+
+/**
+ * @returns {import('./types.js').AnimationConfig}
+ */
+export function createEmptyConfig() {
+    return {
+        word_anim_groups: [],
+        line_anim_groups: [],
     };
 }
 

@@ -76,7 +76,7 @@ check(default_config.word_anim_groups.length === 2, "默认有 2 个字动画组
 check(default_config.line_anim_groups.length === 2, "默认有 2 个行动画组 (实际: " + default_config.line_anim_groups.length + ")");
 
 // 验证基础样式组的时间锚点（无限大）
-const base_group = default_config.word_anim_groups[0];
+const base_group = default_config.word_anim_groups[1];
 check(base_group.start.offset === null, "基础样式组 start.offset = null (无限)");
 check(base_group.end.offset === null, "基础样式组 end.offset = null (无限)");
 check(base_group.start.dir === "before", "基础样式组 start.dir = before (-∞)");
@@ -247,11 +247,11 @@ section("6. config:changed 实时刷新");
 // 修改全局动画组
 const new_config = createDefaultConfig();
 // 修改基础样式组的字体
-new_config.word_anim_groups[0].channels[0].to = "Georgia, serif";
-new_config.word_anim_groups[0].channels[0].from = "Georgia, serif";
+new_config.word_anim_groups[1].channels[0].to = "Georgia, serif";
+new_config.word_anim_groups[1].channels[0].from = "Georgia, serif";
 // 修改字号
-new_config.word_anim_groups[0].channels[1].to = 48;
-new_config.word_anim_groups[0].channels[1].from = 48;
+new_config.word_anim_groups[1].channels[1].to = 48;
+new_config.word_anim_groups[1].channels[1].from = 48;
 
 bus.emit("config:changed", new_config);
 

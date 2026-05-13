@@ -70,11 +70,21 @@ export function initFileIO(toolbar_left, status_bar) {
     document.body.appendChild(drop_overlay);
 
     document.addEventListener("dragover", (e) => {
+        // 仅外部文件拖拽阻止默认行为，内部 DnD 正常传递
+        const types = e.dataTransfer?.types;
+        if (!types) return;
+        const type_list = Array.from(types);
+        if (!type_list.includes("Files")) return;
         e.preventDefault();
         e.stopPropagation();
     });
 
     document.addEventListener("dragenter", (e) => {
+        // 仅外部文件拖拽显示覆盖层，内部 DnD（动画组排序）忽略
+        const types = e.dataTransfer?.types;
+        if (!types) return;
+        const type_list = Array.from(types);
+        if (!type_list.includes("Files")) return;
         e.preventDefault();
         drag_counter++;
         if (drag_counter === 1) drop_overlay.classList.add("visible");
@@ -89,9 +99,14 @@ export function initFileIO(toolbar_left, status_bar) {
     });
 
     document.addEventListener("drop", (e) => {
-        e.preventDefault();
         drag_counter = 0;
         drop_overlay.classList.remove("visible");
+        // 仅处理外部文件拖拽
+        const types = e.dataTransfer?.types;
+        if (!types) return;
+        const type_list = Array.from(types);
+        if (!type_list.includes("Files")) return;
+        e.preventDefault();
         const file = e.dataTransfer?.files?.[0];
         if (file) handleFile(file);
     });

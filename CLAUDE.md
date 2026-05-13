@@ -78,12 +78,16 @@ app.js（协调层）
 
 ```bash
 npm install          # 安装测试依赖（jsdom，运行时不需要）
-npm test             # 运行 roundtrip-v2.mjs + phase3-audio.mjs + phase4-animation.mjs
+npm test             # 通过 test/runner.mjs 逐个测试所有 .mjs 文件并汇总结果
 node --check js/ttml/parser.js  # 语法检查
 python3 -m http.server 8080     # 启动开发服务器
 ```
 
 Node 路径：`/Users/huanqiu/.nvm/versions/node/v24.15.0/bin/node`（nvm 管理）
+
+## 技能
+
+- `testing-check-pattern`（`.claude/skills/testing-check-pattern/`）— 测试文件编写规范：check/section 断言模式、jsdom 前置设置、runner 集成要求
 
 ## Git 规范
 

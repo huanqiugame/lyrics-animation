@@ -4,7 +4,7 @@
     "jsdom": "^29.1.1"
   },
   "scripts": {
-    "test": "node test/roundtrip-v2.mjs && node test/phase3-audio.mjs && node test/phase4-animation.mjs && node test/step3-line-selection.mjs && node test/step-anim-editor.mjs && node test/step-word-selection.mjs && node test/step-anchor-align.mjs"
+    "test": "node test/runner.mjs"
   },
   "name": "lyrics-animation",
   "version": "1.0.0",

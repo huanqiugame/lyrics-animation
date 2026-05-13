@@ -9,9 +9,8 @@
 
 import { bus } from "../utils/events.js";
 import { h, clear } from "../utils/dom.js";
-import { resolveWord, computeTimeWindow } from "./resolver.js";
-import { applyChannel, getChannel } from "./channels.js";
-import { evaluateEasing } from "./easing.js";
+import { resolveWord, computeTimeWindow, evaluateGroup } from "./resolver.js";
+import { applyChannel } from "./channels.js";
 
 /**
  * @typedef {import('../ttml/types.js').ProjectData} ProjectData
@@ -258,6 +257,7 @@ export class AnimationRenderer {
 
     /**
      * 解析行级样式（从行动画组）
+     * 逐层叠加：全局行动画组 → 行自身行动画组
      * @param {number} t
      * @param {LyricLine} line
      * @param {import('../ttml/types.js').AnimationConfig} config
@@ -265,72 +265,29 @@ export class AnimationRenderer {
      */
     #resolveLineStyles(t, line, config) {
         const result = new Map();
-
-        // 行动画组优先级：行自身 > 全局行动画组
-        let anim_groups = [];
-        if (line.anim_groups && line.anim_groups.length > 0) {
-            anim_groups = line.anim_groups;
-        } else if (config && config.line_anim_groups) {
-            anim_groups = config.line_anim_groups;
-        }
-
-        // 评估每个动画组
-        // 使用行的第一个字作为锚点参考（行级属性如 textAlign 不依赖具体字）
         const ref_word = line.words[0] || { start_time: line.start_time, end_time: line.end_time };
 
-        for (const group of anim_groups) {
-            // 计算时间窗口
-            const start = this.#resolveLineTime(group.start, line, ref_word);
-            const end = this.#resolveLineTime(group.end, line, ref_word);
-
-            if (t < start || t > end) continue;
-
-            const duration = end - start;
-            if (duration <= 0 && start !== -Infinity && end !== Infinity) continue;
-
-            // 计算进度（无限时间窗口时 progress = 0.5，保持稳定值）
-            let progress = 0.5;
-            if (start !== -Infinity && end !== Infinity && duration > 0) {
-                progress = (t - start) / duration;
+        // 层 1: 全局行动画组（逆序：靠上的组优先级高）
+        if (config && config.line_anim_groups) {
+            for (let gi = config.line_anim_groups.length - 1; gi >= 0; gi--) {
+                const group_result = evaluateGroup(config.line_anim_groups[gi], t, ref_word, line);
+                for (const [channel_id, value] of group_result) {
+                    result.set(channel_id, value);
+                }
             }
+        }
 
-            // 评估每个通道
-            for (const channel of group.channels) {
-                const channel_def = getChannel(channel.channel_id);
-                if (!channel_def) continue;
-
-                const eased_progress = evaluateEasing(channel.curve, progress);
-                const value = channel_def.lerp(channel.from, channel.to, eased_progress);
-                result.set(channel.channel_id, value);
+        // 层 2: 行自身行动画组（覆盖全局）
+        if (line.anim_groups && line.anim_groups.length > 0) {
+            for (let gi = line.anim_groups.length - 1; gi >= 0; gi--) {
+                const group_result = evaluateGroup(line.anim_groups[gi], t, ref_word, line);
+                for (const [channel_id, value] of group_result) {
+                    result.set(channel_id, value);
+                }
             }
         }
 
         return result;
-    }
-
-    /**
-     * 解析行级时间锚点
-     * @param {import('../ttml/types.js').TimeAnchor} anchor
-     * @param {LyricLine} line
-     * @param {LyricWord} ref_word
-     * @returns {number}
-     */
-    #resolveLineTime(anchor, line, ref_word) {
-        const base_times = {
-            wordStart: ref_word.start_time,
-            wordEnd: ref_word.end_time,
-            lineStart: line.start_time,
-            lineEnd: line.end_time,
-        };
-        const base = base_times[anchor.ref] || 0;
-
-        if (anchor.offset === null) {
-            return anchor.dir === "before" ? -Infinity : Infinity;
-        }
-        if (anchor.offset === Infinity) return Infinity;
-        if (anchor.offset === -Infinity) return -Infinity;
-
-        return anchor.dir === "before" ? base - anchor.offset : base + anchor.offset;
     }
 
     /**

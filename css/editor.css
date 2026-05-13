@@ -430,12 +430,13 @@
     flex-direction: column;
     gap: 4px;
     padding: 4px;
+    flex: 1;
+    min-height: 0;
 }
 
 .param-section {
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    overflow: hidden;
 }
 
 .param-section-title {
@@ -705,4 +706,42 @@
 .anim-channel-row select,
 .anim-channel-row .anim-chan-val {
     font-size: 0.6rem;
+}
+
+/* ===== 拖拽排序 ===== */
+.drag-handle {
+    cursor: grab;
+    user-select: none;
+    font-size: 0.7rem;
+    padding: 0 2px;
+    color: var(--text-secondary);
+    opacity: 0.35;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.drag-handle:hover {
+    opacity: 0.8;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.dragging {
+    opacity: 0.3;
+    outline: 1px dashed var(--accent);
+}
+
+.drag-over {
+    border-top: 2px solid var(--accent) !important;
+}
+
+.anim-group-card.drag-over {
+    border-top: 2px solid var(--accent) !important;
+    border-radius: 0;
+}
+
+.anim-channel-row.drag-over {
+    border-top: 2px solid var(--accent) !important;
 }

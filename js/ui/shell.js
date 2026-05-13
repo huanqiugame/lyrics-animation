@@ -46,22 +46,13 @@ export function createShell() {
     // ---- 2. 中间：动画参数面板 ----
     const param_panel_panel = h("div", { id: "param-panel-container", className: "panel" });
 
-    const param_panel_box = h("div", { id: "param-panel-box", className: "panel-section collapsible collapsed" });
-    const param_header = h("div", { id: "param-panel-toggle", className: "panel-header toggle" },
+    const param_panel_box = h("div", { id: "param-panel-box", className: "panel-section" });
+    const param_header = h("div", { id: "param-panel-toggle", className: "panel-header" },
         h("span", {}, "动画参数"),
-        h("span", { className: "arrow" }, "▶"),
     );
     const param_content = h("div", { id: "param-panel", className: "panel-body" });
-    param_content.style.display = "none";
     param_panel_box.appendChild(param_header);
     param_panel_box.appendChild(param_content);
-
-    // 折叠/展开切换
-    param_header.addEventListener("click", () => {
-        const collapsed = param_panel_box.classList.toggle("collapsed");
-        param_content.style.display = collapsed ? "none" : "block";
-        param_header.querySelector(".arrow").textContent = collapsed ? "▶" : "▼";
-    });
 
     param_panel_panel.appendChild(param_panel_box);
 
