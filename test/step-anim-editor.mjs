@@ -59,8 +59,8 @@ bus.emit("lyrics:loaded", createEmptyProject());
 // 2 个区块标题
 const titles = panel_el.querySelectorAll(".param-section-title");
 check(titles.length === 2, "2 个区块标题 (实际: " + titles.length + ")");
-check(titles[0].textContent.trim() === "全局行动画组", "区块 1 = 全局行动画组");
-check(titles[1].textContent.trim() === "全局字动画组", "区块 2 = 全局字动画组");
+check(titles[0].children[0].textContent.trim() === "全局行动画组", "区块 1 = 全局行动画组");
+check(titles[1].children[0].textContent.trim() === "全局字动画组", "区块 2 = 全局字动画组");
 
 // 2 个添加按钮
 const all_add_btns = panel_el.querySelectorAll(".btn-add-group");

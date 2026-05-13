@@ -48,6 +48,10 @@ export function createAnimEditor(container) {
     /** @type {Function|null} */
     let change_callback = null;
 
+    // 折叠状态追踪（WeakMap 避免污染数据模型，对象引用不变则状态持续）
+    const groupCollapsedMap = new WeakMap();
+    const channelCollapsedMap = new WeakMap();
+
     // 预生成通道选项列表
     const channel_options = buildChannelOptions();
     const easing_options = buildEasingOptions();
@@ -101,7 +105,9 @@ export function createAnimEditor(container) {
         });
         collapse_group_btn.addEventListener("click", () => {
             card.classList.toggle("collapsed");
-            collapse_group_btn.textContent = card.classList.contains("collapsed") ? "▶" : "▼";
+            const is_collapsed = card.classList.contains("collapsed");
+            collapse_group_btn.textContent = is_collapsed ? "▶" : "▼";
+            groupCollapsedMap.set(group, is_collapsed);
         });
 
         // 时间锚点
@@ -143,6 +149,13 @@ export function createAnimEditor(container) {
         body.appendChild(channels_section);
         card.appendChild(header);
         card.appendChild(body);
+
+        // 还原折叠状态
+        if (groupCollapsedMap.get(group)) {
+            card.classList.add("collapsed");
+            collapse_group_btn.textContent = "▶";
+        }
+
         makeGroupDraggable(card, index);
         return card;
     }
@@ -242,7 +255,9 @@ export function createAnimEditor(container) {
 
         collapse_chan_btn.addEventListener("click", () => {
             row.classList.toggle("collapsed");
-            collapse_chan_btn.textContent = row.classList.contains("collapsed") ? "▶" : "▼";
+            const is_collapsed = row.classList.contains("collapsed");
+            collapse_chan_btn.textContent = is_collapsed ? "▶" : "▼";
+            channelCollapsedMap.set(ch, is_collapsed);
         });
 
         const row = h("div", { className: "anim-channel-row" },
@@ -258,6 +273,13 @@ export function createAnimEditor(container) {
             curve_select,
             remove_btn,
         );
+
+        // 还原折叠状态
+        if (channelCollapsedMap.get(ch)) {
+            row.classList.add("collapsed");
+            collapse_chan_btn.textContent = "▶";
+        }
+
         makeChannelRowDraggable(row, channel_index, channels_arr, group_index);
         return row;
     }
@@ -418,29 +440,41 @@ export function createAnimEditor(container) {
 
         /** 折叠全部动画组和通道 */
         collapseAll() {
-            container.querySelectorAll(".anim-group-card").forEach(c => {
+            container.querySelectorAll(".anim-group-card").forEach((c, gi) => {
                 c.classList.add("collapsed");
                 const icon = c.querySelector(".anim-group-header .collapse-icon");
                 if (icon) icon.textContent = "▶";
-            });
-            container.querySelectorAll(".anim-channel-row").forEach(r => {
-                r.classList.add("collapsed");
-                const icon = r.querySelector(".collapse-icon");
-                if (icon) icon.textContent = "▶";
+                groupCollapsedMap.set(groups[gi], true);
+                const rows = c.querySelectorAll(".anim-channel-row");
+                rows.forEach((r, ci) => {
+                    r.classList.add("collapsed");
+                    const icon2 = r.querySelector(".collapse-icon");
+                    if (icon2) icon2.textContent = "▶";
+                    const group = groups[gi];
+                    if (group && group.channels[ci]) {
+                        channelCollapsedMap.set(group.channels[ci], true);
+                    }
+                });
             });
         },
 
         /** 展开全部动画组和通道 */
         expandAll() {
-            container.querySelectorAll(".anim-group-card").forEach(c => {
+            container.querySelectorAll(".anim-group-card").forEach((c, gi) => {
                 c.classList.remove("collapsed");
                 const icon = c.querySelector(".anim-group-header .collapse-icon");
                 if (icon) icon.textContent = "▼";
-            });
-            container.querySelectorAll(".anim-channel-row").forEach(r => {
-                r.classList.remove("collapsed");
-                const icon = r.querySelector(".collapse-icon");
-                if (icon) icon.textContent = "▼";
+                groupCollapsedMap.set(groups[gi], false);
+                const rows = c.querySelectorAll(".anim-channel-row");
+                rows.forEach((r, ci) => {
+                    r.classList.remove("collapsed");
+                    const icon2 = r.querySelector(".collapse-icon");
+                    if (icon2) icon2.textContent = "▼";
+                    const group = groups[gi];
+                    if (group && group.channels[ci]) {
+                        channelCollapsedMap.set(group.channels[ci], false);
+                    }
+                });
             });
         },
     };

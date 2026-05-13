@@ -252,7 +252,7 @@ project6.lyrics[0].words[0].anim_groups = [
 bus.emit("lyrics:loaded", project6);
 
 // 验证初始标题为"全局字动画组"（现在只有 2 个区块）
-const word_title = panel_container.querySelectorAll(".param-section-title")[1];
+const word_title = panel_container.querySelectorAll(".param-section-title")[1].children[0];
 check(word_title.textContent === "全局字动画组", `初始标题 = "全局字动画组" (实际: "${word_title.textContent}")`);
 
 // 选中 Hello 词 → 标题应切换

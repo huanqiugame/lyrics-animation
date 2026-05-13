@@ -149,7 +149,7 @@ bus.emit("lyrics:loaded", project2);
 
 // 验证初始状态：全局行动画组
 // 现在只有 2 个区块（行/字动画组），行是第一个
-const line_title = panel_container.querySelectorAll(".param-section-title")[0];
+const line_title = panel_container.querySelectorAll(".param-section-title")[0].children[0];
 check(line_title.textContent === "全局行动画组", `初始标题 = "全局行动画组" (实际: "${line_title.textContent}")`);
 
 // 选中 L1（L1 有 1 个动画组）→ 编辑器显示该行的动画组
