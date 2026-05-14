@@ -44,3 +44,17 @@ bus.on("audio:error", ({ message }) => {
 
 // ---- 状态栏初始消息 ----
 shell.statusBar.textContent = "就绪 — 请导入 TTML 歌词文件或拖拽文件到页面";
+
+// ---- 未保存更改提醒 ----
+let hasUnsavedChanges = false;
+
+bus.on("lyrics:loaded", () => { hasUnsavedChanges = false; });
+bus.on("lyrics:modified", () => { hasUnsavedChanges = true; });
+bus.on("config:changed", () => { hasUnsavedChanges = true; });
+
+window.addEventListener("beforeunload", (e) => {
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+    }
+});

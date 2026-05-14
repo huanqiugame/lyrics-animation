@@ -8,10 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 技术栈约束
 
-- **纯原生 HTML/CSS/JS** — 不使用任何前端框架（React/Vue 等）
-- **无构建工具** — 不依赖 Vite/Webpack/pnpm，浏览器直接加载 ES modules
+- **纯原生 HTML/CSS/JS** — 不使用任何前端框架（React/Vue 等），无构建工具
+- **CSS 框架**：Bulma v1（class-based，`<link>` CDN 引入，仅影响 `.class` 选择器，不污染原生元素）
+- **自定义 CSS**：3 个文件（`main.css` 全局变量/按钮/输入框，`editor.css` 编辑器布局，`animation.css` 画布）
 - **浏览器原生 API** — DOM API、CSS Animations、Web Audio API、FileReader/Blob
-- **零外部运行时依赖** — 所有功能用浏览器原生能力实现
 - **代码缩进**：使用 **4 个空格** 缩进
 
 ## 架构
@@ -61,6 +61,8 @@ app.js（协调层）
 4. **TTML 样式**：导入的 `<styling>` 块原样保留，不自作修改
 5. **优先级链**：字动画组 > 行动画组 > 全局字动画组 > 全局行动画组 > 硬编码默认值（4 级）
 6. **选择器**：parser 中查询命名空间元素（`ttm:agent` 等）用 `getElementsByTagName`，比 `querySelector` 更兼容 `xmlns=""` 的情况
+7. **时间锚点**：`offset: null` 表示"无限"（始终在参考点之前/之后），UI 中用 ∞ 按钮切换。`offset: 0` 表示"恰好在该时间点"，语义不同
+8. **折叠状态持久化**：用 `WeakMap` 以数据对象为 key 存储折叠状态。拖拽重排后对象引用不变，状态自动跟随
 
 ## 代码风格
 
@@ -112,15 +114,13 @@ Node 路径：`/Users/huanqiu/.nvm/versions/node/v24.15.0/bin/node`（nvm 管理
 - [x] Phase 2b: TTML 标准扩展格式支持（多 agent/背景人声/styling/region/div）
 - [x] Phase 3: 音频引擎
 - [x] Phase 4: 动画渲染引擎 + 字幕模式预览（channels/resolver/easing/anchors）
+- [x] Phase 5: 动画组编辑器 UI + 优先级链（靠上优先） + 拖拽排序
+- [x] Phase 5: 动画组/通道折叠 + 全部展开/折叠 + 拖拽后折叠状态保持（WeakMap）
+- [x] Phase 5: 时间锚点 ∞/± 无限模式切换按钮
 
 ### 待完成
-- [ ] Phase 5: 动画组编辑器 UI + 导出模块
-  - 全局动画配置面板（text/blur/scroll 等顶层参数）
-  - AnimationGroup 编辑器（创建/编辑/删除动画组：选择通道、设置时间锚点、选曲线）
-  - 行级/字级动画组编辑（选中行/字后打开编辑器）
+- [ ] Phase 6: 时间轴可视化 + 导出模块 + UI 打磨
   - 动画组序列化到 TTML（parser/writer 的 `lv:` 扩展）
   - 导出 TTML + 动画配置 JSON
-- [ ] Phase 6: 时间轴可视化 + 拖拽排序 + UI 打磨
   - 时间轴画布（行/字的可视化时间条）
   - 拖拽调整时间
-  - 样式细节打磨

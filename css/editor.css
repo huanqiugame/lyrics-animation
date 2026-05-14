@@ -627,32 +627,75 @@
 
 .anim-channel-row {
     display: flex;
-    align-items: center;
-    gap: 3px;
+    flex-direction: column;
+    gap: 2px;
     padding: 3px 6px;
-    flex-wrap: wrap;
 }
 
 .anim-channel-row + .anim-channel-row {
     border-top: 1px solid var(--border);
 }
 
-.anim-channel-row select {
-    font-size: 0.6rem;
-    padding: 1px 2px;
-    min-width: 55px;
+/* 两行布局：上排选择器 + 删除，下排参数 */
+.chan-top-row, .chan-bottom-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    width: 100%;
+}
+
+.chan-top-row select {
     flex: 1;
+    min-width: 55px;
+    padding: 2px 4px;
+    font-size: 0.6rem;
+    height: 22px;
+    box-sizing: border-box;
+}
+
+.chan-bottom-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.chan-bottom-row select {
+    flex: 1;
+    min-width: 70px;
+    padding: 2px 4px;
+    font-size: 0.6rem;
+    height: 22px;
+    box-sizing: border-box;
 }
 
 .anim-chan-val {
-    width: 44px;
+    min-width: 60px;
+    flex: 1;
     font-size: 0.6rem;
-    padding: 1px 3px;
+    padding: 2px 4px;
+    height: 22px;
+    box-sizing: border-box;
 }
 
 .anim-chan-label {
     font-size: 0.6rem;
     color: var(--text-secondary);
+}
+
+/* 通道行折叠：改为行内布局，仅显示把手+折叠按钮+名字 */
+.anim-channel-row.collapsed {
+    flex-direction: row;
+    align-items: center;
+    gap: 3px;
+}
+.anim-channel-row.collapsed .chan-bottom-row {
+    display: none;
+}
+.anim-channel-row.collapsed .chan-top-row select,
+.anim-channel-row.collapsed .chan-top-row .btn-icon {
+    display: none;
 }
 
 /* 编辑器按钮 */
@@ -766,11 +809,12 @@
     display: none;
 }
 
-/* 单通道折叠：隐藏所有控件，仅保留拖拽手柄+折叠按钮+通道名 */
-.anim-channel-row.collapsed select,
-.anim-channel-row.collapsed .anim-chan-label,
-.anim-channel-row.collapsed .anim-chan-val,
-.anim-channel-row.collapsed .btn-icon {
+/* 单通道折叠：隐藏底部参数行 + 顶部选择器与删除按钮 */
+.anim-channel-row.collapsed .chan-bottom-row {
+    display: none;
+}
+.anim-channel-row.collapsed .chan-top-row select,
+.anim-channel-row.collapsed .chan-top-row .btn-icon {
     display: none;
 }
 .anim-channel-row .chan-name {

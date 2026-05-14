@@ -91,9 +91,10 @@ export function createAnimEditor(container) {
         const card = h("div", { className: "anim-group-card" });
 
         // 表头：拖拽手柄 + 折叠按钮 + 编号 + 删除按钮
+        const group_handle = h("span", { className: "drag-handle" }, "⠿");
         const collapse_group_btn = h("span", { className: "collapse-icon" }, "▼");
         const header = h("div", { className: "anim-group-header" },
-            h("span", { className: "drag-handle" }, "⠿"),
+            group_handle,
             collapse_group_btn,
             h("span", {}, `动画组 ${index + 1}`),
             h("button", { className: "btn-icon btn-remove-group", type: "button", title: "删除该组" }, "×"),
@@ -156,7 +157,7 @@ export function createAnimEditor(container) {
             collapse_group_btn.textContent = "▶";
         }
 
-        makeGroupDraggable(card, index);
+        makeGroupDraggable(group_handle, card, index);
         return card;
     }
 
@@ -172,13 +173,14 @@ export function createAnimEditor(container) {
         const ref_select = createSelectOptions(anchor.ref, ANCHOR_REFS);
         const dir_select = createSelectOptions(anchor.dir, ANCHOR_DIRS);
         const is_infinite = anchor.offset === null;
-        const offset_input = h("input", {
+        const offset_attrs = {
             type: "number", min: 0,
             value: is_infinite ? "" : anchor.offset,
             className: "anim-offset",
-            disabled: is_infinite,
             placeholder: is_infinite ? "∞" : "",
-        });
+        };
+        if (is_infinite) offset_attrs.disabled = "";
+        const offset_input = h("input", offset_attrs);
         const ms_label = h("span", { className: "anim-unit" }, "ms");
         const infinite_btn = h("button", {
             className: "btn-icon" + (is_infinite ? " infinite-active" : ""),
@@ -291,19 +293,23 @@ export function createAnimEditor(container) {
             channelCollapsedMap.set(ch, is_collapsed);
         });
 
-        const row = h("div", { className: "anim-channel-row" },
-            h("span", { className: "drag-handle" }, "⠿"),
+        const chan_handle = h("span", { className: "drag-handle" }, "⠿");
+        const top_row = h("div", { className: "chan-top-row" },
+            chan_handle,
             collapse_chan_btn,
             chan_name,
             ch_select,
+            remove_btn,
+        );
+        const bottom_row = h("div", { className: "chan-bottom-row" },
             h("span", { className: "anim-chan-label" }, "从"),
             from_input,
             h("span", { className: "anim-chan-label" }, "到"),
             to_input,
             h("span", { className: "anim-chan-label" }, "曲线"),
             curve_select,
-            remove_btn,
         );
+        const row = h("div", { className: "anim-channel-row" }, top_row, bottom_row);
 
         // 还原折叠状态
         if (channelCollapsedMap.get(ch)) {
@@ -311,7 +317,7 @@ export function createAnimEditor(container) {
             collapse_chan_btn.textContent = "▶";
         }
 
-        makeChannelRowDraggable(row, channel_index, channels_arr, group_index);
+        makeChannelRowDraggable(chan_handle, row, channel_index, channels_arr, group_index);
         return row;
     }
 
@@ -340,16 +346,19 @@ export function createAnimEditor(container) {
      * 越靠上（索引小）优先级越高
      * 使用独立 MIME 类型 text/x-anim-group 与通道拖拽隔离
      */
-    function makeGroupDraggable(card, index) {
-        card.draggable = true;
+    function makeGroupDraggable(handle, card, index) {
+        handle.draggable = true;
 
-        card.addEventListener("dragstart", (e) => {
+        handle.addEventListener("dragstart", (e) => {
             e.dataTransfer.effectAllowed = "move";
             e.dataTransfer.setData("text/x-anim-group", String(index));
+            // 整个卡片作为拖拽幽灵图
+            const rect = card.getBoundingClientRect();
+            e.dataTransfer.setDragImage(card, e.clientX - rect.left, e.clientY - rect.top);
             card.classList.add("dragging");
         });
 
-        card.addEventListener("dragend", () => {
+        handle.addEventListener("dragend", () => {
             card.classList.remove("dragging");
             document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
         });
@@ -391,16 +400,19 @@ export function createAnimEditor(container) {
      * 使用独立 MIME 类型 text/x-anim-channel 与组拖拽隔离
      * 仅允许同组内的通道重排
      */
-    function makeChannelRowDraggable(row, channel_index, channels_arr, group_index) {
-        row.draggable = true;
+    function makeChannelRowDraggable(handle, row, channel_index, channels_arr, group_index) {
+        handle.draggable = true;
 
-        row.addEventListener("dragstart", (e) => {
+        handle.addEventListener("dragstart", (e) => {
             e.dataTransfer.effectAllowed = "move";
             e.dataTransfer.setData("text/x-anim-channel", group_index + ":" + channel_index);
+            // 整个通道行作为拖拽幽灵图
+            const rect = row.getBoundingClientRect();
+            e.dataTransfer.setDragImage(row, e.clientX - rect.left, e.clientY - rect.top);
             row.classList.add("dragging");
         });
 
-        row.addEventListener("dragend", () => {
+        handle.addEventListener("dragend", () => {
             row.classList.remove("dragging");
             document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
         });
