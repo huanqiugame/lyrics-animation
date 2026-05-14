@@ -171,16 +171,46 @@ export function createAnimEditor(container) {
     function buildAnchorRow(label, anchor, on_change) {
         const ref_select = createSelectOptions(anchor.ref, ANCHOR_REFS);
         const dir_select = createSelectOptions(anchor.dir, ANCHOR_DIRS);
-        const offset_input = h("input", { type: "number", min: 0, value: anchor.offset, className: "anim-offset" });
+        const is_infinite = anchor.offset === null;
+        const offset_input = h("input", {
+            type: "number", min: 0,
+            value: is_infinite ? "" : anchor.offset,
+            className: "anim-offset",
+            disabled: is_infinite,
+            placeholder: is_infinite ? "∞" : "",
+        });
         const ms_label = h("span", { className: "anim-unit" }, "ms");
+        const infinite_btn = h("button", {
+            className: "btn-icon" + (is_infinite ? " infinite-active" : ""),
+            type: "button", title: "切换无限/偏移模式",
+        }, is_infinite ? "∞" : "±");
 
         function emitChange() {
             on_change({
                 ref: ref_select.value,
                 dir: dir_select.value,
-                offset: Number(offset_input.value) || 0,
+                offset: offset_input.disabled ? null : (Number(offset_input.value) || 0),
             });
         }
+
+        infinite_btn.addEventListener("click", () => {
+            const was_disabled = offset_input.disabled;
+            offset_input.disabled = !was_disabled;
+            if (was_disabled) {
+                // 切换到偏移模式
+                offset_input.value = "0";
+                offset_input.placeholder = "";
+                infinite_btn.textContent = "±";
+                infinite_btn.classList.remove("infinite-active");
+            } else {
+                // 切换到无限模式
+                offset_input.value = "";
+                offset_input.placeholder = "∞";
+                infinite_btn.textContent = "∞";
+                infinite_btn.classList.add("infinite-active");
+            }
+            emitChange();
+        });
 
         ref_select.addEventListener("change", emitChange);
         dir_select.addEventListener("change", emitChange);
@@ -192,6 +222,7 @@ export function createAnimEditor(container) {
             dir_select,
             offset_input,
             ms_label,
+            infinite_btn,
         );
     }
 

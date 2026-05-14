@@ -414,16 +414,6 @@
 	text-overflow: ellipsis;
 }
 
-/* Pico CSS 覆盖：保持布局紧凑 */
-#app {
-    min-height: 0 !important;
-    padding: 0 !important;
-}
-
-#param-panel input[type="range"] {
-    margin: 0 !important;
-}
-
 /* ===== 动画参数面板 ===== */
 #param-panel {
     display: flex;
@@ -599,6 +589,17 @@
     font-size: 0.65rem;
     padding: 1px 3px;
     text-align: right;
+}
+
+/* 无限模式：输入框呈禁用态、浅色 */
+.anim-offset:disabled {
+    opacity: 0.35;
+}
+
+/* 无限模式切换按钮 */
+.btn-icon.infinite-active {
+    color: var(--accent);
+    border-color: var(--accent);
 }
 
 .anim-unit {
