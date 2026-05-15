@@ -21,15 +21,15 @@ export function cubicBezier(x1, y1, x2, y2) {
     const SUBDIVISION_MAX_ITERATIONS = 10;
 
     function sampleCurveX(t) {
-        return ((1 - 3 * x2 + 3 * x1) * t + (3 * x2 - 6 * x1)) * t + 3 * x1 * t;
+        return (((1 - 3 * x2 + 3 * x1) * t + 3 * (x2 - 2 * x1)) * t + 3 * x1) * t;
     }
 
     function sampleCurveY(t) {
-        return ((1 - 3 * y2 + 3 * y1) * t + (3 * y2 - 6 * y1)) * t + 3 * y1 * t;
+        return (((1 - 3 * y2 + 3 * y1) * t + 3 * (y2 - 2 * y1)) * t + 3 * y1) * t;
     }
 
     function sampleCurveDerivativeX(t) {
-        return (3 * (1 - 3 * x2 + 3 * x1) * t + 2 * (3 * x2 - 6 * x1)) * t + 3 * x1;
+        return (3 * (1 - 3 * x2 + 3 * x1) * t + 6 * (x2 - 2 * x1)) * t + 3 * x1;
     }
 
     function solveCurveX(x) {
