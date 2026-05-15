@@ -59,6 +59,7 @@ export function createAnimEditor(container) {
     // ---- 渲染 ----
 
     function render() {
+        const scroll_top = container.scrollTop;
         clear(container);
 
         if (groups.length === 0) {
@@ -78,6 +79,8 @@ export function createAnimEditor(container) {
             notifyChange();
             render();
         });
+
+        container.scrollTop = scroll_top;
     }
 
     // ---- 构建单个动画组卡片 ----
@@ -90,13 +93,59 @@ export function createAnimEditor(container) {
     function buildGroupCard(index, group) {
         const card = h("div", { className: "anim-group-card" });
 
-        // 表头：拖拽手柄 + 折叠按钮 + 编号 + 删除按钮
+        // 表头：拖拽手柄 + 折叠按钮 + 可编辑标题 + 注释图标 + 删除按钮
         const group_handle = h("span", { className: "drag-handle" }, "⠿");
         const collapse_group_btn = h("span", { className: "collapse-icon" }, "▼");
+
+        // 可编辑标题
+        const group_name_text = group.name || `动画组 ${index + 1}`;
+        const title_el = h("span", { className: "anim-group-title", title: "点击修改名称" }, group_name_text);
+        title_el.addEventListener("click", () => {
+            if (title_el.contentEditable === "true") return;
+            title_el.contentEditable = "true";
+            title_el.classList.add("editing");
+            const range = document.createRange();
+            range.selectNodeContents(title_el);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            title_el.focus();
+        });
+        title_el.addEventListener("blur", () => {
+            title_el.contentEditable = "false";
+            title_el.classList.remove("editing");
+            const text = title_el.textContent.trim();
+            group.name = text;
+            title_el.textContent = text || `动画组 ${index + 1}`;
+            notifyChange();
+        });
+        title_el.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                title_el.blur();
+            }
+        });
+
+        // 注释图标
+        const annot_icon = h("span", {
+            className: "annot-icon" + (group.note ? " has-note" : ""),
+            title: "注释",
+        });
+        const pen_el = h("span", { className: "annot-pen" });
+        pen_el.innerHTML = `<svg viewBox="0 0 77.8514 77.5959" xmlns="http://www.w3.org/2000/svg" width="14" height="14"><path d="M13.3398 73.1485L66.6112 19.9259L58.0663 11.3321L4.74601 64.5548L0.10734 75.4434C-0.380941 76.6153 0.88859 77.9825 2.06047 77.4942ZM70.9081 15.7266L75.8398 10.8927C78.33 8.40242 78.4765 5.71688 76.2304 3.47078L74.5702 1.81063C72.373-0.386639 69.6874-0.191327 67.1972 2.25008L62.2655 7.13289Z" fill="currentColor"/></svg>`;
+        const doc_el = h("span", { className: "annot-doc" });
+        doc_el.innerHTML = `<svg viewBox="0 0 107.617 107.275" xmlns="http://www.w3.org/2000/svg" width="14" height="14"><path d="M30.0293 107.275C32.4219 107.275 34.082 106.006 37.0605 103.369L53.9062 88.3789L85.2539 88.3789C99.8047 88.3789 107.617 80.3223 107.617 66.0156L107.617 28.6133C107.617 14.3066 99.8047 6.25 85.2539 6.25L22.3633 6.25C7.8125 6.25 0 14.2578 0 28.6133L0 66.0156C0 80.3711 7.8125 88.3789 22.3633 88.3789L24.707 88.3789L24.707 101.074C24.707 104.834 26.6113 107.275 30.0293 107.275ZM32.0312 98.3398L32.0312 84.1797C32.0312 81.543 31.0059 80.5176 28.3691 80.5176L22.3633 80.5176C12.5 80.5176 7.86133 75.4883 7.86133 65.9668L7.86133 28.6133C7.86133 19.0918 12.5 14.1113 22.3633 14.1113L85.2539 14.1113C95.0684 14.1113 99.7559 19.0918 99.7559 28.6133L99.7559 65.9668C99.7559 75.4883 95.0684 80.5176 85.2539 80.5176L53.6133 80.5176C50.8789 80.5176 49.5117 80.9082 47.6562 82.8125Z" fill="currentColor"/><path d="M28.6621 33.8379L78.3691 33.8379C79.9316 33.8379 81.1523 32.6172 81.1523 31.0059C81.1523 29.4922 79.9316 28.2227 78.3691 28.2227L28.6621 28.2227C27.0996 28.2227 25.8301 29.4922 25.8301 31.0059C25.8301 32.6172 27.0996 33.8379 28.6621 33.8379Z" fill="currentColor"/><path d="M28.6621 49.7559L78.3691 49.7559C79.9316 49.7559 81.1523 48.4863 81.1523 46.875C81.1523 45.3613 79.9316 44.0918 78.3691 44.0918L28.6621 44.0918C27.0996 44.0918 25.8301 45.3613 25.8301 46.875C25.8301 48.4863 27.0996 49.7559 28.6621 49.7559Z" fill="currentColor"/><path d="M28.6621 65.625L60.9863 65.625C62.5488 65.625 63.7695 64.4043 63.7695 62.8418C63.7695 61.2305 62.5488 59.9609 60.9863 59.9609L28.6621 59.9609C27.0996 59.9609 25.8301 61.2305 25.8301 62.8418C25.8301 64.4043 27.0996 65.625 28.6621 65.625Z" fill="currentColor"/></svg>`;
+        annot_icon.appendChild(pen_el);
+        annot_icon.appendChild(doc_el);
+        annot_icon.addEventListener("click", () => {
+            showAnnotationModal(group, () => { notifyChange(); render(); });
+        });
+
         const header = h("div", { className: "anim-group-header" },
             group_handle,
             collapse_group_btn,
-            h("span", {}, `动画组 ${index + 1}`),
+            title_el,
+            annot_icon,
             h("button", { className: "btn-icon btn-remove-group", type: "button", title: "删除该组" }, "×"),
         );
         header.lastElementChild.addEventListener("click", () => {
@@ -128,13 +177,7 @@ export function createAnimEditor(container) {
         const channels_section = h("div", { className: "anim-channels-section" });
         const channels_header = h("div", { className: "anim-channels-header" },
             h("span", {}, "通道"),
-            h("button", { className: "btn-icon btn-add-channel", type: "button" }, "+ 添加"),
         );
-        channels_header.lastElementChild.addEventListener("click", () => {
-            group.channels.push(createEmptyChannel());
-            notifyChange();
-            render();
-        });
         channels_section.appendChild(channels_header);
 
         if (group.channels.length === 0) {
@@ -146,6 +189,14 @@ export function createAnimEditor(container) {
         for (let ci = 0; ci < group.channels.length; ci++) {
             channels_section.appendChild(buildChannelRow(index, ci, group.channels, group));
         }
+
+        const add_channel_btn = h("button", { className: "btn-icon btn-add-channel", type: "button" }, "+ 添加通道");
+        add_channel_btn.addEventListener("click", () => {
+            group.channels.push(createEmptyChannel());
+            notifyChange();
+            render();
+        });
+        channels_section.appendChild(add_channel_btn);
 
         body.appendChild(channels_section);
         card.appendChild(header);
@@ -523,6 +574,156 @@ export function createAnimEditor(container) {
     };
 }
 
+// ==================== 注释模态框 ====================
+
+/**
+ * 打开注释编辑模态框
+ * @param {import("../ttml/types.js").AnimationGroup} group
+ * @param {Function} on_save - 保存后回调（含组已更新的数据）
+ */
+function showAnnotationModal(group, on_save) {
+    const overlay = h("div", { className: "modal-overlay" });
+    const modal = h("div", { className: "modal-box" });
+
+    const close_btn = h("button", { className: "btn-icon", type: "button" }, "×");
+    const header = h("div", { className: "modal-header" },
+        h("span", { className: "modal-title" }, "动画组注释"),
+        close_btn,
+    );
+
+    const name_input = h("input", {
+        type: "text", className: "modal-input",
+        value: group.name || "",
+        placeholder: "动画组名称",
+    });
+    const note_input = h("textarea", {
+        className: "modal-textarea",
+        placeholder: "注释",
+    }, group.note || "");
+
+    const body = h("div", { className: "modal-body" },
+        h("label", { className: "modal-label" }, "名称"),
+        name_input,
+        h("label", { className: "modal-label" }, "注释"),
+        note_input,
+    );
+
+    const save_btn = h("button", { type: "button", className: "primary" }, "保存");
+    const cancel_btn = h("button", { type: "button" }, "取消");
+    const footer = h("div", { className: "modal-footer" },
+        cancel_btn,
+        save_btn,
+    );
+
+    modal.appendChild(header);
+    modal.appendChild(body);
+    modal.appendChild(footer);
+    overlay.appendChild(modal);
+
+    const initial_name = group.name || "";
+    const initial_note = group.note || "";
+    let is_dirty = false;
+
+    function checkDirty() {
+        is_dirty = name_input.value !== initial_name || note_input.value !== initial_note;
+    }
+    name_input.addEventListener("input", checkDirty);
+    note_input.addEventListener("input", checkDirty);
+
+    function cleanup() {
+        document.body.removeChild(overlay);
+        document.removeEventListener("keydown", onKeyDown);
+    }
+
+    function doClose() {
+        if (is_dirty) {
+            showConfirmDialog("放弃修改？", "输入的修改将丢失。", cleanup);
+        } else {
+            cleanup();
+        }
+    }
+
+    function doSave() {
+        group.name = name_input.value.trim();
+        group.note = note_input.value.trim();
+        cleanup();
+        on_save();
+    }
+
+    function onKeyDown(e) {
+        if (e.key === "Escape") doClose();
+    }
+
+    close_btn.addEventListener("click", doClose);
+    cancel_btn.addEventListener("click", doClose);
+    save_btn.addEventListener("click", doSave);
+
+    // 点击 overlay 背景关闭（仅当 mousedown 和 mouseup 都在 overlay 上时）
+    // 避免拖拽 textarea 调整大小后松手时误关闭
+    let mousedown_on_overlay = false;
+    overlay.addEventListener("mousedown", (e) => {
+        mousedown_on_overlay = (e.target === overlay);
+    });
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay && mousedown_on_overlay) {
+            doClose();
+        }
+    });
+
+    document.addEventListener("keydown", onKeyDown);
+
+    document.body.appendChild(overlay);
+    name_input.focus();
+}
+
+/**
+ * 简单确认对话框
+ * @param {string} title
+ * @param {string} message
+ * @param {Function} on_confirm - 确认后回调
+ */
+function showConfirmDialog(title, message, on_confirm) {
+    const overlay = h("div", { className: "modal-overlay" });
+    const modal = h("div", { className: "modal-box confirm-box" });
+
+    const header = h("div", { className: "modal-header" },
+        h("span", { className: "modal-title" }, title),
+    );
+
+    const body = h("div", { className: "modal-body" },
+        h("p", {}, message),
+    );
+
+    const cancel_btn = h("button", { type: "button" }, "取消");
+    const discard_btn = h("button", { type: "button", className: "primary" }, "舍弃");
+    const footer = h("div", { className: "modal-footer" },
+        cancel_btn,
+        discard_btn,
+    );
+
+    modal.appendChild(header);
+    modal.appendChild(body);
+    modal.appendChild(footer);
+    overlay.appendChild(modal);
+
+    function cleanup() {
+        document.body.removeChild(overlay);
+        document.removeEventListener("keydown", onKeyDown);
+    }
+
+    cancel_btn.addEventListener("click", cleanup);
+    discard_btn.addEventListener("click", () => { cleanup(); on_confirm(); });
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) cleanup();
+    });
+    function onKeyDown(e) {
+        if (e.key === "Escape") cleanup();
+    }
+    document.addEventListener("keydown", onKeyDown);
+
+    document.body.appendChild(overlay);
+}
+
 // ==================== 工具函数 ====================
 
 /**
@@ -619,6 +820,8 @@ function buildEasingOptions() {
  */
 function createEmptyGroup() {
     return {
+        name: "",
+        note: "",
         start: { ref: "wordStart", dir: "before", offset: 200 },
         end: { ref: "wordStart", dir: "after", offset: 0 },
         channels: [],

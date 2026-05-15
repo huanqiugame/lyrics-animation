@@ -548,13 +548,37 @@
 .anim-group-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 4px 8px;
     background: rgba(255, 255, 255, 0.03);
     border-bottom: 1px solid var(--border);
     font-size: 0.7rem;
     font-weight: 600;
     color: var(--text-secondary);
+}
+
+.anim-group-title {
+    flex: 1;
+    margin: 0 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: default;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 0 2px;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.anim-group-header:hover .anim-group-title {
+    border-color: var(--border);
+    cursor: text;
+}
+
+.anim-group-title.editing {
+    border-color: var(--accent);
+    background: rgba(24, 160, 88, 0.08);
+    outline: none;
 }
 
 .anim-group-body {
@@ -618,7 +642,7 @@
 .anim-channels-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 3px 6px;
     font-size: 0.65rem;
     color: var(--text-secondary);
@@ -832,4 +856,145 @@
     margin-left: auto;
     display: flex;
     gap: 4px;
+}
+
+/* ===== 注释图标 ===== */
+.annot-icon {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 3px;
+    transition: background 0.1s;
+    color: var(--text-secondary);
+}
+
+.anim-group-header:hover .annot-icon {
+    display: inline-flex;
+}
+
+.annot-icon:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.annot-icon.has-note {
+    display: inline-flex;
+    color: #f1c40f;
+}
+
+.annot-icon.has-note:hover {
+    color: #f1c40f;
+}
+
+/* 默认显示笔图标，隐藏文档图标 */
+.annot-icon .annot-doc { display: none; }
+.annot-icon .annot-pen { display: inline; }
+
+/* 有注释时：显示文档图标，隐藏笔图标（悬浮时反转） */
+.annot-icon.has-note .annot-pen { display: none; }
+.annot-icon.has-note .annot-doc { display: inline; }
+.annot-icon.has-note:hover .annot-pen { display: inline; }
+.annot-icon.has-note:hover .annot-doc { display: none; }
+
+.annot-icon svg {
+    display: block;
+    width: 12px;
+    height: 12px;
+}
+
+/* ===== 模态框 ===== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-width: 360px;
+    max-width: 480px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modal-body p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.modal-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.modal-input,
+.modal-textarea {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text);
+    border-radius: 4px;
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.modal-input:focus,
+.modal-textarea:focus {
+    border-color: var(--accent);
+}
+
+.modal-textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+}
+
+.confirm-box {
+    min-width: 300px;
+    max-width: 400px;
 }
