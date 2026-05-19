@@ -1,0 +1,42 @@
+{
+    "word_anim_groups": [
+        {
+            "start": { "ref": "wordStart", "dir": "before", "offset": 0 },
+            "end": { "ref": "lineEnd", "dir": "after", "offset": 0 },
+            "channels": [
+                { "channel_id": "opacity", "from": 1, "to": 1, "curve": "linear" }
+            ]
+        },
+        {
+            "start": { "ref": "wordStart", "dir": "before", "offset": null },
+            "end": { "ref": "lineEnd", "dir": "after", "offset": null },
+            "channels": [
+                { "channel_id": "fontFamily", "from": "system-ui, -apple-system, sans-serif", "to": "system-ui, -apple-system, sans-serif", "curve": "linear" },
+                { "channel_id": "fontSize", "from": 32, "to": 32, "curve": "linear" },
+                { "channel_id": "color", "from": "#ffffff", "to": "#ffffff", "curve": "linear" },
+                { "channel_id": "textShadow", "from": "none", "to": "none", "curve": "linear" },
+                { "channel_id": "textStroke", "from": "none", "to": "none", "curve": "linear" },
+                { "channel_id": "opacity", "from": 0, "to": 0, "curve": "linear" }
+            ]
+        }
+    ],
+    "line_anim_groups": [
+        {
+            "start": { "ref": "lineStart", "dir": "before", "offset": null },
+            "end": { "ref": "lineEnd", "dir": "after", "offset": null },
+            "channels": [
+                { "channel_id": "anchorPosition", "from": "left", "to": "left", "curve": "linear" },
+                { "channel_id": "anchorOffsetX", "from": 20, "to": 20, "curve": "linear" },
+                { "channel_id": "anchorOffsetY", "from": 0, "to": 0, "curve": "linear" },
+                { "channel_id": "anchorOffsetZ", "from": 0, "to": 0, "curve": "linear" }
+            ]
+        },
+        {
+            "start": { "ref": "lineStart", "dir": "before", "offset": null },
+            "end": { "ref": "lineEnd", "dir": "after", "offset": null },
+            "channels": [
+                { "channel_id": "textAlign", "from": "left", "to": "left", "curve": "linear" }
+            ]
+        }
+    ]
+}

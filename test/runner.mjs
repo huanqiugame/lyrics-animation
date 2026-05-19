@@ -20,6 +20,7 @@ const tests = [
     "step-fallback-chain.mjs",
     "step-priority-chain.mjs",
     "step-drag-reorder.mjs",
+    "step-config-io.mjs",
 ];
 
 let total_assert_passed = 0;

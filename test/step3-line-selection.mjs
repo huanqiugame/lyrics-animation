@@ -157,13 +157,14 @@ bus.emit("ui:selectLine", { lineId: "L1", line: project2.lyrics[0] });
 // L1 有 1 个自定义动画组，编辑器应显示这 1 个组（不显示全局组）
 // 查询行动画组区块内的卡片（第一个 param-section）
 const line_section = panel_container.querySelectorAll(".param-section")[0];
-const group_cards_l1 = line_section.querySelectorAll(".anim-group-card");
+const line_custom_body = line_section.querySelector(".param-section-body");
+const group_cards_l1 = line_custom_body.querySelectorAll(".anim-group-card");
 check(group_cards_l1.length === 1, `L1 有一个动画组 (实际: ${group_cards_l1.length})`);
 check(line_title.textContent === "行动画组 [L1]", `选中 L1 后标题 = "行动画组 [L1]" (实际: "${line_title.textContent}")`);
 
 // 选中 L2（L2 无动画组）→ 编辑器显示 0 个组
 bus.emit("ui:selectLine", { lineId: "L2", line: project2.lyrics[1] });
-const group_cards_l2 = line_section.querySelectorAll(".anim-group-card");
+const group_cards_l2 = line_custom_body.querySelectorAll(".anim-group-card");
 // L2.anim_groups = [] 空数组，编辑器应显示 0 个组（选中时显示行自身的组，不回退到全局）
 check(group_cards_l2.length === 0, `L2 无动画组 (实际: ${group_cards_l2.length})`);
 check(line_title.textContent === "行动画组 [L2]", `选中 L2 后标题 = "行动画组 [L2]" (实际: "${line_title.textContent}")`);

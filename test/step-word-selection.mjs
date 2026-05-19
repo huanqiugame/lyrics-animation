@@ -261,13 +261,14 @@ check(word_title.textContent === "字动画组 [Hello]", `选中 Hello 后标题
 
 // 验证字动画组编辑器中加载了 Hello 的自定义动画组（1 个）
 const word_section = panel_container.querySelectorAll(".param-section")[1];
-const word_group_cards = word_section.querySelectorAll(".anim-group-card");
+const word_custom_body = word_section.querySelector(".param-section-body");
+const word_group_cards = word_custom_body.querySelectorAll(".anim-group-card");
 check(word_group_cards.length === 1, "Hello 有 1 个自定义动画组 (实际: " + word_group_cards.length + ")");
 
 // 选中 World（anim_groups=[] 空数组，显示空，不回退到全局）
 bus.emit("ui:selectWord", { lineId: "L1", line: project6.lyrics[0], wordIndex: 1, word: project6.lyrics[0].words[1] });
 check(word_title.textContent === "字动画组 [World]", `选中 World 后标题 = "字动画组 [World]" (实际: "${word_title.textContent}")`);
-const world_group_cards = word_section.querySelectorAll(".anim-group-card");
+const world_group_cards = word_custom_body.querySelectorAll(".anim-group-card");
 check(world_group_cards.length === 0, "World 有空数组，显示 0 个动画组 (实际: " + world_group_cards.length + ")");
 
 // 取消选择 → 恢复全局

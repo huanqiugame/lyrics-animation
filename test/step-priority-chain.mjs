@@ -274,8 +274,8 @@ check(word_el.style.color === "rgb(255, 255, 255)" || word_el.style.color === "#
 // opacity 在字出现期间应为 1
 check(word_el.style.opacity === "1", "渲染器应用 Default opacity = 1 (实际: " + word_el.style.opacity + ")");
 
-// ==================== 测试 8: 面板不显示 Default 配置 ====================
-section("8. 面板不显示 Default 配置");
+// ==================== 测试 8: Default 配置在默认区块中显示 ====================
+section("8. Default 配置在默认区块中显示");
 
 const { initParamPanel } = await import("../js/ui/param-panel.js");
 const panel_el = h("div", { id: "test-panel" });
@@ -285,13 +285,17 @@ initParamPanel(panel_el);
 // 加载空配置项目
 bus.emit("lyrics:loaded", proj7);
 
-// 面板显示默认配置动画组（Default config 含 2 行动画组 + 2 字动画组）
-const group_cards = panel_el.querySelectorAll(".anim-group-card");
-check(group_cards.length >= 4, "面板显示默认配置动画组 (实际: " + group_cards.length + ")");
-
-// 检查面板是否为非空状态
+// 自定义区块应为空（anim_config 现在是空的）
 const empty_hints = panel_el.querySelectorAll(".anim-editor-empty");
-check(empty_hints.length === 0, "无空状态提示（默认配置已加载）(实际: " + empty_hints.length + ")");
+check(empty_hints.length === 2, "自定义区块显示 2 个空状态提示 (实际: " + empty_hints.length + ")");
+
+// Default 区块应有预设动画组
+const default_group_cards = panel_el.querySelectorAll(".default-section-body .anim-group-card");
+check(default_group_cards.length >= 4, "默认区块显示预设动画组 (实际: " + default_group_cards.length + ")");
+
+// 面板总计应有动画组卡片（在默认区块中）
+const all_group_cards = panel_el.querySelectorAll(".anim-group-card");
+check(all_group_cards.length >= 4, "面板总计显示 >= 4 动画组卡片 (实际: " + all_group_cards.length + ")");
 
 // ==================== 汇总 ====================
 console.log("\n═══════════════════════════════════");

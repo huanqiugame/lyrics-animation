@@ -51,6 +51,7 @@ let hasUnsavedChanges = false;
 bus.on("lyrics:loaded", () => { hasUnsavedChanges = false; });
 bus.on("lyrics:modified", () => { hasUnsavedChanges = true; });
 bus.on("config:changed", () => { hasUnsavedChanges = true; });
+bus.on("defaultConfig:changed", () => { hasUnsavedChanges = true; });
 
 window.addEventListener("beforeunload", (e) => {
     if (hasUnsavedChanges) {

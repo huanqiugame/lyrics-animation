@@ -9,13 +9,13 @@ import { JSDOM } from "jsdom";
 
 // ---- 设置 jsdom 全局环境（必须在动态导入被测模块之前完成） ----
 const dom = new JSDOM(
-	`<!DOCTYPE html><html><body>
-		<button id="btn-play" class="play-btn" disabled>▶</button>
-		<span id="time-display" class="time-display">00:00.000 / 00:00.000</span>
-		<input type="range" id="progress-bar" class="progress-bar" min="0" max="1000" value="0" disabled>
-		<input type="range" id="volume-slider" min="0" max="100" value="80" class="volume-slider">
-	</body></html>`,
-	{ url: "http://localhost/" },
+    `<!DOCTYPE html><html><body>
+    	<button id="btn-play" class="play-btn" disabled>▶</button>
+    	<span id="time-display" class="time-display">00:00.000 / 00:00.000</span>
+    	<input type="range" id="progress-bar" class="progress-bar" min="0" max="1000" value="0" disabled>
+    	<input type="range" id="volume-slider" min="0" max="100" value="80" class="volume-slider">
+    </body></html>`,
+    { url: "http://localhost/" },
 );
 
 // 注入 jsdom 的 DOM API 到全局（必须在动态导入之前）
@@ -36,44 +36,44 @@ globalThis.URL.revokeObjectURL = () => {};
 
 // ---- Mock Audio ----
 class MockAudio extends EventTarget {
-	constructor() {
-		super();
-		this._currentTime = 0;
-		this._duration = NaN;
-		this._volume = 0.8;
-		this._src = "";
-		this._paused = true;
-		this.preload = "auto";
-		this.error = null;
-	}
+    constructor() {
+    	super();
+    	this._currentTime = 0;
+    	this._duration = NaN;
+    	this._volume = 0.8;
+    	this._src = "";
+    	this._paused = true;
+    	this.preload = "auto";
+    	this.error = null;
+    }
 
-	get currentTime() { return this._currentTime; }
-	set currentTime(v) { this._currentTime = v; }
-	get duration() { return this._duration; }
-	set duration(v) { this._duration = v; }
-	get volume() { return this._volume; }
-	set volume(v) { this._volume = v; }
-	get src() { return this._src; }
-	set src(v) { this._src = v; }
-	get paused() { return this._paused; }
+    get currentTime() { return this._currentTime; }
+    set currentTime(v) { this._currentTime = v; }
+    get duration() { return this._duration; }
+    set duration(v) { this._duration = v; }
+    get volume() { return this._volume; }
+    set volume(v) { this._volume = v; }
+    get src() { return this._src; }
+    set src(v) { this._src = v; }
+    get paused() { return this._paused; }
 
-	play() {
-		this._paused = false;
-		this.dispatchEvent(new Event("play"));
-		return Promise.resolve();
-	}
+    play() {
+    	this._paused = false;
+    	this.dispatchEvent(new Event("play"));
+    	return Promise.resolve();
+    }
 
-	pause() {
-		this._paused = true;
-		this.dispatchEvent(new Event("pause"));
-	}
+    pause() {
+    	this._paused = true;
+    	this.dispatchEvent(new Event("pause"));
+    }
 
-	load() {
-		setTimeout(() => {
-			this._duration = 200;
-			this.dispatchEvent(new Event("loadedmetadata"));
-		}, 0);
-	}
+    load() {
+    	setTimeout(() => {
+    		this._duration = 200;
+    		this.dispatchEvent(new Event("loadedmetadata"));
+    	}, 0);
+    }
 }
 
 globalThis.HTMLAudioElement = MockAudio;
@@ -90,16 +90,16 @@ let passed = 0;
 let failed = 0;
 
 function check(cond, msg) {
-	if (cond) {
-		passed++;
-	} else {
-		console.error(`  ✗ 失败: ${msg}`);
-		failed++;
-	}
+    if (cond) {
+    	passed++;
+    } else {
+    	console.error(`  ✗ 失败: ${msg}`);
+    	failed++;
+    }
 }
 
 function section(title) {
-	console.log(`\n=== ${title} ===`);
+    console.log(`\n=== ${title} ===`);
 }
 
 // ==================== 1. AudioEngine.isAudioFile ====================
@@ -160,27 +160,27 @@ check(engine.isPlaying === beforeToggle, `toggle back: → ${engine.isPlaying}`)
 section("5. seek & setVolume");
 
 try {
-	engine.seek(30000);
-	check(true, "seek(30000ms) 不抛错");
-	engine.seek(0);
-	check(true, "seek(0) 不抛错");
+    engine.seek(30000);
+    check(true, "seek(30000ms) 不抛错");
+    engine.seek(0);
+    check(true, "seek(0) 不抛错");
 } catch (e) {
-	check(false, `seek 抛错: ${e.message}`);
+    check(false, `seek 抛错: ${e.message}`);
 }
 
 try {
-	engine.setVolume(80);
-	check(true, "setVolume(80) 不抛错");
-	engine.setVolume(0);
-	check(true, "setVolume(0) 不抛错");
-	engine.setVolume(100);
-	check(true, "setVolume(100) 不抛错");
-	engine.setVolume(200);
-	check(true, "setVolume(200) 不抛错（超限约束到 1）");
-	engine.setVolume(-50);
-	check(true, "setVolume(-50) 不抛错（负值约束到 0）");
+    engine.setVolume(80);
+    check(true, "setVolume(80) 不抛错");
+    engine.setVolume(0);
+    check(true, "setVolume(0) 不抛错");
+    engine.setVolume(100);
+    check(true, "setVolume(100) 不抛错");
+    engine.setVolume(200);
+    check(true, "setVolume(200) 不抛错（超限约束到 1）");
+    engine.setVolume(-50);
+    check(true, "setVolume(-50) 不抛错（负值约束到 0）");
 } catch (e) {
-	check(false, `setVolume 抛错: ${e.message}`);
+    check(false, `setVolume 抛错: ${e.message}`);
 }
 
 // ==================== 6. load(File) → audio:loaded ====================
@@ -189,17 +189,17 @@ section("6. load(File) → audio:loaded");
 const engine2 = new AudioEngine();
 let loadedDuration = -1;
 bus.on("audio:loaded", ({ duration }) => {
-	loadedDuration = duration;
+    loadedDuration = duration;
 });
 
 const blob = new Blob(["mock"], { type: "audio/mpeg" });
 const file = new File([blob], "test.mp3", { type: "audio/mpeg" });
 
 try {
-	engine2.load(file);
-	check(true, "load(File) 不抛错");
+    engine2.load(file);
+    check(true, "load(File) 不抛错");
 } catch (e) {
-	check(false, `load 抛错: ${e.message}`);
+    check(false, `load 抛错: ${e.message}`);
 }
 
 // load() 中的 loadedmetadata 是异步的（MockAudio.load 用 setTimeout）
@@ -235,10 +235,10 @@ initPlayback(engine3);
 
 // 按钮点击（hasAudio=false 守卫）
 try {
-	btnPlay.click();
-	check(true, "btnPlay click 不抛错（hasAudio=false 守卫）");
+    btnPlay.click();
+    check(true, "btnPlay click 不抛错（hasAudio=false 守卫）");
 } catch (e) {
-	check(false, `btnPlay click 抛错: ${e.message}`);
+    check(false, `btnPlay click 抛错: ${e.message}`);
 }
 
 volumeSlider.value = "30";
@@ -282,13 +282,13 @@ section("12. 进度条 mouseup → engine.seek");
 
 let seekValue = -1;
 const engine4 = {
-	hasAudio: true,
-	isPlaying: false,
-	toggle() {},
-	play() {},
-	pause() {},
-	seek(v) { seekValue = v; },
-	setVolume() {},
+    hasAudio: true,
+    isPlaying: false,
+    toggle() {},
+    play() {},
+    pause() {},
+    seek(v) { seekValue = v; },
+    setVolume() {},
 };
 initPlayback(engine4);
 
@@ -305,12 +305,12 @@ section("13. 键盘快捷键 Space");
 // 此处测试第一个引擎的 Space 行为
 let toggle1 = 0;
 const engine5 = {
-	hasAudio: true,
-	toggle() { toggle1++; },
-	play() {},
-	pause() {},
-	seek() {},
-	setVolume() {},
+    hasAudio: true,
+    toggle() { toggle1++; },
+    play() {},
+    pause() {},
+    seek() {},
+    setVolume() {},
 };
 initPlayback(engine5);
 
@@ -341,12 +341,12 @@ document.body.removeChild(textarea);
 // hasAudio=false → engine6 的 handler 检查 hasAudio 为 false，不触发 toggle
 let toggle2 = 0;
 const engine6 = {
-	hasAudio: false,
-	toggle() { toggle2++; },
-	play() {},
-	pause() {},
-	seek() {},
-	setVolume() {},
+    hasAudio: false,
+    toggle() { toggle2++; },
+    play() {},
+    pause() {},
+    seek() {},
+    setVolume() {},
 };
 initPlayback(engine6);
 
@@ -362,21 +362,21 @@ check(toggle2 === 0, "hasAudio=false 的引擎 → Space 不触发 toggle");
 console.log("\n═══════════════════════════════════");
 console.log(`通过: ${passed}  失败: ${failed}`);
 if (failed === 0) {
-	console.log("🎉 Phase 3 全部测试通过！");
-	console.log("  AudioEngine         静态方法 isAudioFile ✓");
-	console.log("  AudioEngine         初始状态 ✓");
-	console.log("  AudioEngine         play/pause/toggle 事件 ✓");
-	console.log("  AudioEngine         seek/setVolume API ✓");
-	console.log("  AudioEngine         load(File) → audio:loaded ✓");
-	console.log("  initPlayback        DOM 控件连线 ✓");
-	console.log("  audio:loaded        控件启用 + 时间显示 ✓");
-	console.log("  audio:play/pause    按钮图标切换 ✓");
-	console.log("  audio:timeupdate    时间 + 进度条更新 ✓");
-	console.log("  进度条拖拽          isSeeking 互斥 + mouseup seek ✓");
-	console.log("  键盘快捷键          Space 触发 + input/textarea 豁免 ✓");
-	console.log("  健壮性              hasAudio 守卫 ✓");
+    console.log("🎉 Phase 3 全部测试通过！");
+    console.log("  AudioEngine         静态方法 isAudioFile ✓");
+    console.log("  AudioEngine         初始状态 ✓");
+    console.log("  AudioEngine         play/pause/toggle 事件 ✓");
+    console.log("  AudioEngine         seek/setVolume API ✓");
+    console.log("  AudioEngine         load(File) → audio:loaded ✓");
+    console.log("  initPlayback        DOM 控件连线 ✓");
+    console.log("  audio:loaded        控件启用 + 时间显示 ✓");
+    console.log("  audio:play/pause    按钮图标切换 ✓");
+    console.log("  audio:timeupdate    时间 + 进度条更新 ✓");
+    console.log("  进度条拖拽          isSeeking 互斥 + mouseup seek ✓");
+    console.log("  键盘快捷键          Space 触发 + input/textarea 豁免 ✓");
+    console.log("  健壮性              hasAudio 守卫 ✓");
 } else {
-	console.log(`❌ ${failed} 个测试失败`);
-	process.exit(1);
+    console.log(`❌ ${failed} 个测试失败`);
+    process.exit(1);
 }
 console.log("═══════════════════════════════════");

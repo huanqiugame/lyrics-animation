@@ -52,6 +52,12 @@ export function createAnimEditor(container) {
     const groupCollapsedMap = new WeakMap();
     const channelCollapsedMap = new WeakMap();
 
+    // 编辑模式控制
+    // readOnly=true: 所有输入禁用，按钮隐藏（查看模式）
+    // lockStructure=true: 隐藏增/删按钮和拖拽，但输入可用（可编辑值但不可改结构）
+    let readOnly = false;
+    let lockStructure = false;
+
     // 预生成通道选项列表
     const channel_options = buildChannelOptions();
     const easing_options = buildEasingOptions();
@@ -62,7 +68,7 @@ export function createAnimEditor(container) {
         const scroll_top = container.scrollTop;
         clear(container);
 
-        if (groups.length === 0) {
+        if (groups.length === 0 && !readOnly) {
             container.appendChild(
                 h("div", { className: "anim-editor-empty" }, "暂无动画组，点击下方按钮添加"),
             );
@@ -72,13 +78,15 @@ export function createAnimEditor(container) {
             container.appendChild(buildGroupCard(i, groups[i]));
         }
 
-        container.appendChild(
-            h("button", { className: "btn-add-group", type: "button" }, "+ 添加动画组"),
-        ).addEventListener("click", () => {
-            groups.push(createEmptyGroup());
-            notifyChange();
-            render();
-        });
+        if (!lockStructure && !readOnly) {
+            container.appendChild(
+                h("button", { className: "btn-add-group", type: "button" }, "+ 添加动画组"),
+            ).addEventListener("click", () => {
+                groups.push(createEmptyGroup());
+                notifyChange();
+                render();
+            });
+        }
 
         container.scrollTop = scroll_top;
     }
@@ -95,36 +103,41 @@ export function createAnimEditor(container) {
 
         // 表头：拖拽手柄 + 折叠按钮 + 可编辑标题 + 注释图标 + 删除按钮
         const group_handle = h("span", { className: "drag-handle" }, "⠿");
+        if (readOnly || lockStructure) {
+            group_handle.style.display = "none";
+        }
         const collapse_group_btn = h("span", { className: "collapse-icon" }, "▼");
 
         // 可编辑标题
         const group_name_text = group.name || `动画组 ${index + 1}`;
         const title_el = h("span", { className: "anim-group-title", title: "点击修改名称" }, group_name_text);
-        title_el.addEventListener("click", () => {
-            if (title_el.contentEditable === "true") return;
-            title_el.contentEditable = "true";
-            title_el.classList.add("editing");
-            const range = document.createRange();
-            range.selectNodeContents(title_el);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
-            title_el.focus();
-        });
-        title_el.addEventListener("blur", () => {
-            title_el.contentEditable = "false";
-            title_el.classList.remove("editing");
-            const text = title_el.textContent.trim();
-            group.name = text;
-            title_el.textContent = text || `动画组 ${index + 1}`;
-            notifyChange();
-        });
-        title_el.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                title_el.blur();
-            }
-        });
+        if (!readOnly && !lockStructure) {
+            title_el.addEventListener("click", () => {
+                if (title_el.contentEditable === "true") return;
+                title_el.contentEditable = "true";
+                title_el.classList.add("editing");
+                const range = document.createRange();
+                range.selectNodeContents(title_el);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                title_el.focus();
+            });
+            title_el.addEventListener("blur", () => {
+                title_el.contentEditable = "false";
+                title_el.classList.remove("editing");
+                const text = title_el.textContent.trim();
+                group.name = text;
+                title_el.textContent = text || `动画组 ${index + 1}`;
+                notifyChange();
+            });
+            title_el.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    title_el.blur();
+                }
+            });
+        }
 
         // 注释图标
         const annot_icon = h("span", {
@@ -141,18 +154,17 @@ export function createAnimEditor(container) {
             showAnnotationModal(group, () => { notifyChange(); render(); });
         });
 
-        const header = h("div", { className: "anim-group-header" },
-            group_handle,
-            collapse_group_btn,
-            title_el,
-            annot_icon,
-            h("button", { className: "btn-icon btn-remove-group", type: "button", title: "删除该组" }, "×"),
-        );
-        header.lastElementChild.addEventListener("click", () => {
-            groups.splice(index, 1);
-            notifyChange();
-            render();
-        });
+        const header_children = [group_handle, collapse_group_btn, title_el, annot_icon];
+        if (!readOnly && !lockStructure) {
+            const del_btn = h("button", { className: "btn-icon btn-remove-group", type: "button", title: "删除该组" }, "×");
+            del_btn.addEventListener("click", () => {
+                groups.splice(index, 1);
+                notifyChange();
+                render();
+            });
+            header_children.push(del_btn);
+        }
+        const header = h("div", { className: "anim-group-header" }, ...header_children);
         collapse_group_btn.addEventListener("click", () => {
             card.classList.toggle("collapsed");
             const is_collapsed = card.classList.contains("collapsed");
@@ -190,13 +202,15 @@ export function createAnimEditor(container) {
             channels_section.appendChild(buildChannelRow(index, ci, group.channels, group));
         }
 
-        const add_channel_btn = h("button", { className: "btn-icon btn-add-channel", type: "button" }, "+ 添加通道");
-        add_channel_btn.addEventListener("click", () => {
-            group.channels.push(createEmptyChannel());
-            notifyChange();
-            render();
-        });
-        channels_section.appendChild(add_channel_btn);
+        if (!readOnly && !lockStructure) {
+            const add_channel_btn = h("button", { className: "btn-icon btn-add-channel", type: "button" }, "+ 添加通道");
+            add_channel_btn.addEventListener("click", () => {
+                group.channels.push(createEmptyChannel());
+                notifyChange();
+                render();
+            });
+            channels_section.appendChild(add_channel_btn);
+        }
 
         body.appendChild(channels_section);
         card.appendChild(header);
@@ -208,7 +222,9 @@ export function createAnimEditor(container) {
             collapse_group_btn.textContent = "▶";
         }
 
-        makeGroupDraggable(group_handle, card, index);
+        if (!readOnly && !lockStructure) {
+            makeGroupDraggable(group_handle, card, index);
+        }
         return card;
     }
 
@@ -223,6 +239,10 @@ export function createAnimEditor(container) {
     function buildAnchorRow(label, anchor, on_change) {
         const ref_select = createSelectOptions(anchor.ref, ANCHOR_REFS);
         const dir_select = createSelectOptions(anchor.dir, ANCHOR_DIRS);
+        if (readOnly) {
+            ref_select.disabled = true;
+            dir_select.disabled = true;
+        }
         const is_infinite = anchor.offset === null;
         const offset_attrs = {
             type: "number", min: 0,
@@ -230,13 +250,16 @@ export function createAnimEditor(container) {
             className: "anim-offset",
             placeholder: is_infinite ? "∞" : "",
         };
-        if (is_infinite) offset_attrs.disabled = "";
+        if (is_infinite || readOnly) offset_attrs.disabled = "";
         const offset_input = h("input", offset_attrs);
         const ms_label = h("span", { className: "anim-unit" }, "ms");
         const infinite_btn = h("button", {
             className: "btn-icon" + (is_infinite ? " infinite-active" : ""),
             type: "button", title: "切换无限/偏移模式",
         }, is_infinite ? "∞" : "±");
+        if (readOnly) {
+            infinite_btn.disabled = true;
+        }
 
         function emitChange() {
             on_change({
@@ -305,7 +328,13 @@ export function createAnimEditor(container) {
         const from_input = h("input", { type: "text", value: String(ch.from ?? ""), className: "anim-chan-val", placeholder: "从" });
         const to_input = h("input", { type: "text", value: String(ch.to ?? ""), className: "anim-chan-val", placeholder: "到" });
         const curve_select = createSelectOptions(ch.curve, easing_options);
-        const remove_btn = h("button", { className: "btn-icon btn-remove-chan", type: "button", title: "删除通道" }, "×");
+
+        if (readOnly) {
+            ch_select.disabled = true;
+            from_input.disabled = true;
+            to_input.disabled = true;
+            curve_select.disabled = true;
+        }
 
         function emitChange() {
             channels_arr[channel_index] = {
@@ -318,6 +347,7 @@ export function createAnimEditor(container) {
         }
 
         ch_select.addEventListener("change", () => {
+            if (ch_select.disabled) return;
             // 切换通道时，用该通道的默认值填充 from/to
             const ch_info = getChannelInfo(ch_select.value);
             from_input.value = String(ch_info.default_from ?? "");
@@ -328,14 +358,9 @@ export function createAnimEditor(container) {
             }
             emitChange();
         });
-        from_input.addEventListener("change", emitChange);
-        to_input.addEventListener("change", emitChange);
-        curve_select.addEventListener("change", emitChange);
-        remove_btn.addEventListener("click", () => {
-            channels_arr.splice(channel_index, 1);
-            notifyChange();
-            render();
-        });
+        from_input.addEventListener("change", () => { if (!from_input.disabled) emitChange(); });
+        to_input.addEventListener("change", () => { if (!to_input.disabled) emitChange(); });
+        curve_select.addEventListener("change", () => { if (!curve_select.disabled) emitChange(); });
 
         collapse_chan_btn.addEventListener("click", () => {
             row.classList.toggle("collapsed");
@@ -345,13 +370,20 @@ export function createAnimEditor(container) {
         });
 
         const chan_handle = h("span", { className: "drag-handle" }, "⠿");
-        const top_row = h("div", { className: "chan-top-row" },
-            chan_handle,
-            collapse_chan_btn,
-            chan_name,
-            ch_select,
-            remove_btn,
-        );
+        if (readOnly || lockStructure) {
+            chan_handle.style.display = "none";
+        }
+        const top_row_children = [chan_handle, collapse_chan_btn, chan_name, ch_select];
+        if (!readOnly && !lockStructure) {
+            const remove_btn = h("button", { className: "btn-icon btn-remove-chan", type: "button", title: "删除通道" }, "×");
+            remove_btn.addEventListener("click", () => {
+                channels_arr.splice(channel_index, 1);
+                notifyChange();
+                render();
+            });
+            top_row_children.push(remove_btn);
+        }
+        const top_row = h("div", { className: "chan-top-row" }, ...top_row_children);
         const bottom_row = h("div", { className: "chan-bottom-row" },
             h("span", { className: "anim-chan-label" }, "从"),
             from_input,
@@ -368,7 +400,9 @@ export function createAnimEditor(container) {
             collapse_chan_btn.textContent = "▶";
         }
 
-        makeChannelRowDraggable(chan_handle, row, channel_index, channels_arr, group_index);
+        if (!readOnly && !lockStructure) {
+            makeChannelRowDraggable(chan_handle, row, channel_index, channels_arr, group_index);
+        }
         return row;
     }
 
@@ -510,9 +544,33 @@ export function createAnimEditor(container) {
         /**
          * 加载动画组数据并渲染
          * @param {AnimationGroup[]} new_groups
+         * @param {{readOnly?: boolean, lockStructure?: boolean}} [opts]
          */
-        load(new_groups) {
+        load(new_groups, opts) {
+            if (opts) {
+                if (opts.readOnly !== undefined) readOnly = opts.readOnly;
+                if (opts.lockStructure !== undefined) lockStructure = opts.lockStructure;
+            }
             groups = new_groups;
+            render();
+        },
+
+        /**
+         * 设置只读模式（禁用所有输入，隐藏增/删/拖拽按钮）
+         * @param {boolean} v
+         */
+        setReadOnly(v) {
+            readOnly = v;
+            if (v) lockStructure = true; // 只读隐含结构锁定
+            render();
+        },
+
+        /**
+         * 设置结构锁定模式（隐藏增/删/拖拽按钮，但输入保持可编辑）
+         * @param {boolean} v
+         */
+        setLockStructure(v) {
+            lockStructure = v;
             render();
         },
 

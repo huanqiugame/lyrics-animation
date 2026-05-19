@@ -53,6 +53,12 @@ export class AnimationRenderer {
                 this.updateTime(this.#currentTime);
             }
         });
+        bus.on("defaultConfig:changed", (config) => {
+            if (this.#project) {
+                this.#project.default_anim_config = config;
+                this.updateTime(this.#currentTime);
+            }
+        });
         bus.on("audio:timeupdate", ({ currentTime }) => {
             this.#currentTime = currentTime;
             this.updateTime(currentTime);
@@ -111,7 +117,7 @@ export class AnimationRenderer {
         if (!this.#project || !this.#canvas) return;
 
         const lyrics = this.#project.lyrics;
-        const config = this.#project.anim_config;
+        const config = this.#getMergedConfig();
         const canvas_rect = this.#canvas.getBoundingClientRect();
 
         // 遍历所有行，应用动画
@@ -253,6 +259,20 @@ export class AnimationRenderer {
             return config.line_anim_groups;
         }
         return [];
+    }
+
+    /**
+     * 合并默认 + 自定义动画配置
+     * 自定义组放在前面（索引小），逆序遍历时优先级高于默认组
+     * @returns {import('../ttml/types.js').AnimationConfig}
+     */
+    #getMergedConfig() {
+        const custom = this.#project.anim_config || { line_anim_groups: [], word_anim_groups: [] };
+        const def = this.#project.default_anim_config || { line_anim_groups: [], word_anim_groups: [] };
+        return {
+            line_anim_groups: [...custom.line_anim_groups, ...def.line_anim_groups],
+            word_anim_groups: [...custom.word_anim_groups, ...def.word_anim_groups],
+        };
     }
 
     /**

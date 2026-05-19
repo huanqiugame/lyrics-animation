@@ -307,3 +307,31 @@ export function downloadTTML(ttml_text, filename = "lyric.ttml") {
     a.click();
     URL.revokeObjectURL(url);
 }
+
+/**
+ * 从 JSON 字符串解析动画配置
+ * @param {string} jsonString
+ * @returns {import("./types.js").AnimationConfig}
+ * @throws {Error} 如果 JSON 格式无效或缺少必要字段
+ */
+export function parseConfigJSON(jsonString) {
+    let parsed;
+    try {
+        parsed = JSON.parse(jsonString);
+    } catch (_) {
+        throw new Error("无效的 JSON 格式");
+    }
+    if (!parsed || typeof parsed !== "object") {
+        throw new Error("无效的动画配置：需要一个对象");
+    }
+    if (!Array.isArray(parsed.line_anim_groups)) {
+        throw new Error("无效的动画配置：缺少 line_anim_groups 数组");
+    }
+    if (!Array.isArray(parsed.word_anim_groups)) {
+        throw new Error("无效的动画配置：缺少 word_anim_groups 数组");
+    }
+    return {
+        line_anim_groups: parsed.line_anim_groups,
+        word_anim_groups: parsed.word_anim_groups,
+    };
+}

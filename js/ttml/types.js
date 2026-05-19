@@ -3,6 +3,8 @@
  * 所有时间单位为毫秒（整数）
  */
 
+import { getDefaultConfig } from "../config-loader.js";
+
 // ---- 默认值 ----
 
 export const DEFAULTS = {
@@ -12,68 +14,6 @@ export const DEFAULTS = {
     text_shadow: "none",
     text_stroke: "none",
 };
-
-/**
- * 创建默认的全局字动画组
- * 包含基础样式（覆盖整个时间线）+ 出现/消失动画
- * @returns {import('./types.js').AnimationGroup[]}
- */
-function createDefaultWordAnimGroups() {
-    return [
-        // 出现动画（第一=最高优先级）：在 wordStart ~ lineEnd 期间，opacity=1
-        // from=1, to=1 意味着整个期间 opacity 始终为 1
-        {
-            start: { ref: "wordStart", dir: "before", offset: 0 },
-            end: { ref: "lineEnd", dir: "after", offset: 0 },
-            channels: [
-                { channel_id: "opacity", from: 1, to: 1, curve: "linear" },
-            ],
-        },
-        // 基础样式组（第二=较低优先级）：-∞ ~ +∞，默认字体、颜色等 + 默认不可见（opacity=0）
-        // 仅在出现组未激活时（字开始前 / 行结束后）生效
-        {
-            start: { ref: "wordStart", dir: "before", offset: null },  // -∞
-            end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
-            channels: [
-                { channel_id: "fontFamily", from: DEFAULTS.font_family, to: DEFAULTS.font_family, curve: "linear" },
-                { channel_id: "fontSize", from: DEFAULTS.font_size, to: DEFAULTS.font_size, curve: "linear" },
-                { channel_id: "color", from: DEFAULTS.text_color, to: DEFAULTS.text_color, curve: "linear" },
-                { channel_id: "textShadow", from: DEFAULTS.text_shadow, to: DEFAULTS.text_shadow, curve: "linear" },
-                { channel_id: "textStroke", from: DEFAULTS.text_stroke, to: DEFAULTS.text_stroke, curve: "linear" },
-                { channel_id: "opacity", from: 0, to: 0, curve: "linear" },
-            ],
-        },
-    ];
-}
-
-/**
- * 创建默认的全局行动画组
- * 设置文字对齐方式 + 锚点位置（画布左侧 + X偏移20px）
- * @returns {import('./types.js').AnimationGroup[]}
- */
-function createDefaultLineAnimGroups() {
-    return [
-        // 锚点定位（第一=最高优先级）：画布左侧 + X偏移20px
-        {
-            start: { ref: "lineStart", dir: "before", offset: null },  // -∞
-            end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
-            channels: [
-                { channel_id: "anchorPosition", from: "left", to: "left", curve: "linear" },
-                { channel_id: "anchorOffsetX", from: 20, to: 20, curve: "linear" },
-                { channel_id: "anchorOffsetY", from: 0, to: 0, curve: "linear" },
-                { channel_id: "anchorOffsetZ", from: 0, to: 0, curve: "linear" },
-            ],
-        },
-        // 基础行样式（第二）：文字左对齐
-        {
-            start: { ref: "lineStart", dir: "before", offset: null },  // -∞
-            end: { ref: "lineEnd", dir: "after", offset: null },       // +∞
-            channels: [
-                { channel_id: "textAlign", from: "left", to: "left", curve: "linear" },
-            ],
-        },
-    ];
-}
 
 // ---- 工厂函数 ----
 
@@ -126,10 +66,8 @@ export function createEmptyConfig() {
  * @returns {import('./types.js').AnimationConfig}
  */
 export function createDefaultConfig() {
-    return {
-        word_anim_groups: createDefaultWordAnimGroups(),
-        line_anim_groups: createDefaultLineAnimGroups(),
-    };
+    const src = getDefaultConfig();
+    return JSON.parse(JSON.stringify(src));
 }
 
 /**
@@ -160,7 +98,8 @@ export function createEmptyProject() {
         agents: [],
         styles: {},
         regions: {},
-        anim_config: createDefaultConfig(),
+        anim_config: createEmptyConfig(),
+        default_anim_config: createDefaultConfig(),
         audio_file_name: null,
     };
 }
@@ -268,6 +207,7 @@ export function createEmptyProject() {
  * @property {AgentInfo[]} agents
  * @property {Record<string, TtmlStyle>} styles
  * @property {Record<string, RegionInfo>} regions
- * @property {AnimationConfig} anim_config
+ * @property {AnimationConfig} anim_config - 自定义全局动画配置（用户可编辑）
+ * @property {AnimationConfig} default_anim_config - 默认全局动画配置（初始为空，通过 Alt+导入填充）
  * @property {string|null} audio_file_name
  */
