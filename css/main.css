@@ -69,7 +69,6 @@ button:disabled {
 
 /* 通用输入 */
 input, select, textarea {
-    padding: 6px 10px;
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text);
