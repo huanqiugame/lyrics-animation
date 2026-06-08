@@ -623,8 +623,15 @@ export function createAnimEditor(container) {
     });
 
     // 点击组卡片/通道行时自动聚焦（浏览器原生行为，jsdom 需要手动触发）
+    // 记录 mousedown 来源，避免拖拽选中输入框文字后松开时抢焦点
+    let last_mousedown_in_input = false;
+    container.addEventListener("mousedown", (e) => {
+        last_mousedown_in_input = !!e.target.closest("input, select, textarea, [contenteditable]");
+    });
+
     container.addEventListener("click", (e) => {
         if (readOnly) return;
+        if (last_mousedown_in_input) return;
         const card = e.target.closest(".anim-group-card");
         if (card && !e.target.closest("input, select, textarea, [contenteditable], button")) {
             card.focus();
