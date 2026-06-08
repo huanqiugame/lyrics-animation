@@ -55,8 +55,11 @@ export function createAnimEditor(container) {
     // 编辑模式控制
     // readOnly=true: 所有输入禁用，按钮隐藏（查看模式）
     // lockStructure=true: 隐藏增/删按钮和拖拽，但输入可用（可编辑值但不可改结构）
+    // disableScope=true: scope 下拉禁用（行/字级动画组不支持调整 scope）
     let readOnly = false;
     let lockStructure = false;
+    let disableScope = false;
+    let preferredScope = "all";
 
     // 焦点管理状态
     let focused_group_index = -1;
@@ -86,7 +89,9 @@ export function createAnimEditor(container) {
             container.appendChild(
                 h("button", { className: "btn-add-group", type: "button" }, "+ 添加动画组"),
             ).addEventListener("click", () => {
-                groups.push(createEmptyGroup());
+                const new_group = createEmptyGroup();
+                if (preferredScope !== "all") new_group.scope = preferredScope;
+                groups.push(new_group);
                 notifyChange();
                 render();
             });
@@ -158,14 +163,14 @@ export function createAnimEditor(container) {
             showAnnotationModal(group, () => { notifyChange(); render(); });
         });
 
-        // 作用域选择器
+        // 作用域选择器（放在标题前，避免注释按钮 hover 导致偏移）
         const scope_select = h("select", { className: "anim-group-scope" });
         for (const [val, label] of [["all", "所有"], ["standard", "标准"], ["duet", "对唱"], ["background", "背景"]]) {
             const opt = h("option", { value: val }, label);
             scope_select.appendChild(opt);
         }
         scope_select.value = group.scope || "all";
-        if (readOnly || lockStructure) {
+        if (readOnly || lockStructure || disableScope) {
             scope_select.disabled = true;
         } else {
             scope_select.addEventListener("change", () => {
@@ -174,7 +179,7 @@ export function createAnimEditor(container) {
             });
         }
 
-        const header_children = [group_handle, collapse_group_btn, title_el, scope_select, annot_icon];
+        const header_children = [group_handle, collapse_group_btn, scope_select, title_el, annot_icon];
         if (!readOnly && !lockStructure) {
             const del_btn = h("button", { className: "btn-icon btn-remove-group", type: "button", title: "删除该组" }, "×");
             del_btn.addEventListener("click", () => {
@@ -833,6 +838,8 @@ export function createAnimEditor(container) {
             if (opts) {
                 if (opts.readOnly !== undefined) readOnly = opts.readOnly;
                 if (opts.lockStructure !== undefined) lockStructure = opts.lockStructure;
+                if (opts.disableScope !== undefined) disableScope = opts.disableScope;
+                if (opts.preferredScope !== undefined) preferredScope = opts.preferredScope;
             }
             groups = new_groups;
             render();

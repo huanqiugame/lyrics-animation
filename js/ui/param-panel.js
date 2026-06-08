@@ -38,17 +38,73 @@ const defaultStates = {
     word: { editingEnabled: false },
 };
 
-// 作用域过滤器状态
+// 作用域过滤器常量
 const SCOPE_FILTERS = [
-    ["all", "全部"],
+    ["all", "所有"],
     ["standard", "标准"],
     ["duet", "对唱"],
     ["background", "背景"],
 ];
-let line_scope_filter = "all";
+
+// 多选过滤器状态（Set 存储选中的 scope 值）
+let line_scope_filter = new Set();
+let word_scope_filter = new Set();
 
 // DOM 元素引用 (填充于 init 阶段)
 const els = {};
+
+// ==================== 工具函数 ====================
+
+/**
+ * 根据多选过滤器筛选动画组
+ * 空 Set = 显示全部；非空 Set = 显示匹配任一选中 scope 的组
+ * @param {import("../ttml/types.js").AnimationGroup[]} groups
+ * @param {Set<string>} filter
+ * @returns {import("../ttml/types.js").AnimationGroup[]}
+ */
+function filterGroups(groups, filter) {
+    if (filter.size === 0) return groups;
+    return groups.filter((g) => filter.has(g.scope || "all"));
+}
+
+/**
+ * 获取过滤器的首选 scope（第一个选中项）
+ * @param {Set<string>} filter
+ * @returns {string}
+ */
+function getPreferredScope(filter) {
+    if (filter.size === 0) return "all";
+    return filter.values().next().value;
+}
+
+/**
+ * 创建作用域过滤器按钮组
+ * @param {Set<string>} filterState - 对应的过滤器状态引用
+ * @param {Function} onUpdate - 过滤器变化时的回调
+ * @returns {HTMLElement}
+ */
+function makeScopeFilterBar(filterState, onUpdate) {
+    const bar = h("div", { className: "scope-filter-bar" });
+    for (const [val, label] of SCOPE_FILTERS) {
+        const btn = h("button", {
+            className: "scope-filter-btn",
+            type: "button",
+            "data-scope": val,
+        }, label);
+        btn.addEventListener("click", () => {
+            if (filterState.has(val)) {
+                filterState.delete(val);
+                btn.classList.remove("active");
+            } else {
+                filterState.add(val);
+                btn.classList.add("active");
+            }
+            onUpdate();
+        });
+        bar.appendChild(btn);
+    }
+    return bar;
+}
 
 /**
  * 创建默认动画组区块（含标题和可折叠内容区）
@@ -118,12 +174,13 @@ export function initParamPanel(container) {
             selected_line.anim_groups = groups;
             if (project) bus.emit("lyrics:modified", project);
         } else if (config) {
-            if (line_scope_filter === "all") {
+            if (line_scope_filter.size === 0) {
+                // 无过滤：直接替换全部
                 config.line_anim_groups = groups;
             } else {
                 // 过滤模式：保留不匹配的组，替换匹配的组
                 const others = config.line_anim_groups.filter(
-                    (g) => (g.scope || "all") !== line_scope_filter,
+                    (g) => !line_scope_filter.has(g.scope || "all"),
                 );
                 config.line_anim_groups = [...others, ...groups];
             }
@@ -149,23 +206,8 @@ export function initParamPanel(container) {
         makeCollapseButtons(line_editor),
     );
 
-    // ---- 作用域过滤器按钮组 ----
-    const scope_filter_bar = h("div", { className: "scope-filter-bar" });
-    for (const [val, label] of SCOPE_FILTERS) {
-        const btn = h("button", {
-            className: "scope-filter-btn" + (val === line_scope_filter ? " active" : ""),
-            type: "button",
-            "data-scope": val,
-        }, label);
-        btn.addEventListener("click", () => {
-            line_scope_filter = val;
-            scope_filter_bar.querySelectorAll(".scope-filter-btn").forEach((b) => {
-                b.classList.toggle("active", b.dataset.scope === val);
-            });
-            updateEditorMode();
-        });
-        scope_filter_bar.appendChild(btn);
-    }
+    // ---- 行作用域过滤器按钮组 ----
+    const line_scope_filter_bar = makeScopeFilterBar(line_scope_filter, updateEditorMode);
 
     // ---- 默认行动画组区块（只读、折叠） ----
     const line_default_section = createDefaultSection(defaultStates.line);
@@ -183,7 +225,7 @@ export function initParamPanel(container) {
 
     const line_anim_section = h("div", { className: "param-section" },
         line_title,
-        scope_filter_bar,
+        line_scope_filter_bar,
         line_editor_box,
         line_default_section.title,
         line_default_section.body,
@@ -196,8 +238,15 @@ export function initParamPanel(container) {
         if (selected_word) {
             selected_word.anim_groups = groups;
             if (project) bus.emit("lyrics:modified", project);
-        } else {
-            if (config) config.word_anim_groups = groups;
+        } else if (config) {
+            if (word_scope_filter.size === 0) {
+                config.word_anim_groups = groups;
+            } else {
+                const others = config.word_anim_groups.filter(
+                    (g) => !word_scope_filter.has(g.scope || "all"),
+                );
+                config.word_anim_groups = [...others, ...groups];
+            }
             emitConfigChanged();
         }
     });
@@ -207,6 +256,9 @@ export function initParamPanel(container) {
         word_title_text,
         makeCollapseButtons(word_editor),
     );
+
+    // ---- 字作用域过滤器按钮组 ----
+    const word_scope_filter_bar = makeScopeFilterBar(word_scope_filter, updateEditorMode);
 
     // ---- 默认字动画组区块（只读、折叠） ----
     const word_default_section = createDefaultSection(defaultStates.word);
@@ -224,6 +276,7 @@ export function initParamPanel(container) {
 
     const word_anim_section = h("div", { className: "param-section" },
         word_title,
+        word_scope_filter_bar,
         word_editor_box,
         word_default_section.title,
         word_default_section.body,
@@ -242,7 +295,8 @@ export function initParamPanel(container) {
     els.wordTitle = word_title_text;
     els.lineDefaultSection = line_default_section;
     els.wordDefaultSection = word_default_section;
-    els.scopeFilterBar = scope_filter_bar;
+    els.lineScopeFilterBar = line_scope_filter_bar;
+    els.wordScopeFilterBar = word_scope_filter_bar;
 
     // ========== 事件绑定 ==========
     bus.on("lyrics:loaded", (p) => {
@@ -296,26 +350,36 @@ export function initParamPanel(container) {
  * 根据选中状态更新自定义动画组编辑器的内容和标题
  */
 function updateEditorMode() {
+    // ---- 行动画组 ----
     if (selected_line) {
-        els.lineEditor.load(selected_line.anim_groups || []);
+        // 选中行：显示该行动画组，scope 禁用，隐藏过滤器
+        els.lineEditor.load(selected_line.anim_groups || [], { disableScope: true });
         els.lineTitle.textContent = `行动画组 [${selected_line.id}]`;
-        els.scopeFilterBar.style.display = "none";
+        els.lineScopeFilterBar.style.display = "none";
     } else {
+        // 全局：显示过滤后的动画组
         const all_groups = config ? config.line_anim_groups : [];
-        const filtered = line_scope_filter === "all"
-            ? all_groups
-            : all_groups.filter((g) => (g.scope || "all") === line_scope_filter);
-        els.lineEditor.load(filtered);
+        const filtered = filterGroups(all_groups, line_scope_filter);
+        const preferred = getPreferredScope(line_scope_filter);
+        els.lineEditor.load(filtered, { disableScope: false, preferredScope: preferred });
         els.lineTitle.textContent = "全局行动画组";
-        els.scopeFilterBar.style.display = "";
+        els.lineScopeFilterBar.style.display = "";
     }
 
+    // ---- 字动画组 ----
     if (selected_word) {
-        els.wordEditor.load(selected_word.anim_groups || []);
+        // 选中词：显示该词动画组，scope 禁用，隐藏过滤器
+        els.wordEditor.load(selected_word.anim_groups || [], { disableScope: true });
         els.wordTitle.textContent = `字动画组 [${selected_word.word}]`;
+        els.wordScopeFilterBar.style.display = "none";
     } else {
-        els.wordEditor.load(config ? config.word_anim_groups : []);
+        // 全局：显示过滤后的动画组
+        const all_groups = config ? config.word_anim_groups : [];
+        const filtered = filterGroups(all_groups, word_scope_filter);
+        const preferred = getPreferredScope(word_scope_filter);
+        els.wordEditor.load(filtered, { disableScope: false, preferredScope: preferred });
         els.wordTitle.textContent = "全局字动画组";
+        els.wordScopeFilterBar.style.display = "";
     }
 }
 

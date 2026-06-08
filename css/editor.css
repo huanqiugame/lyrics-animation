@@ -514,18 +514,20 @@
 .scope-filter-bar {
     display: flex;
     gap: 4px;
-    padding: 4px 0;
+    padding: 2px 0;
+    flex-wrap: wrap;
 }
 
 .scope-filter-btn {
-    font-size: 0.75em;
-    padding: 2px 8px;
+    font-size: 0.72em;
+    padding: 1px 6px;
     border: 1px solid var(--border);
     border-radius: 3px;
     background: var(--bg);
     color: var(--text-secondary);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    line-height: 1.4;
 }
 
 .scope-filter-btn:hover {
