@@ -58,6 +58,10 @@ export function createAnimEditor(container) {
     let readOnly = false;
     let lockStructure = false;
 
+    // 焦点管理状态
+    let focused_group_index = -1;
+    let focused_channel_index = -1;
+
     // 预生成通道选项列表
     const channel_options = buildChannelOptions();
     const easing_options = buildEasingOptions();
@@ -99,7 +103,7 @@ export function createAnimEditor(container) {
      * @returns {HTMLElement}
      */
     function buildGroupCard(index, group) {
-        const card = h("div", { className: "anim-group-card" });
+        const card = h("div", { className: "anim-group-card", tabindex: "0" });
 
         // 表头：拖拽手柄 + 折叠按钮 + 可编辑标题 + 注释图标 + 删除按钮
         const group_handle = h("span", { className: "drag-handle" }, "⠿");
@@ -392,7 +396,7 @@ export function createAnimEditor(container) {
             h("span", { className: "anim-chan-label" }, "曲线"),
             curve_select,
         );
-        const row = h("div", { className: "anim-channel-row" }, top_row, bottom_row);
+        const row = h("div", { className: "anim-channel-row", tabindex: "0" }, top_row, bottom_row);
 
         // 还原折叠状态
         if (channelCollapsedMap.get(ch)) {
@@ -538,6 +542,219 @@ export function createAnimEditor(container) {
             render();
         });
     }
+    function toggleGroupCollapse(group_idx) {
+        if (group_idx < 0 || group_idx >= groups.length) return;
+        const group = groups[group_idx];
+        const was_collapsed = groupCollapsedMap.get(group);
+        groupCollapsedMap.set(group, !was_collapsed);
+        render();
+    }
+
+    // ---- 焦点辅助函数 ----
+
+    function getGroupIndex(card) {
+        const cards = Array.from(container.querySelectorAll(".anim-group-card"));
+        return cards.indexOf(card);
+    }
+
+    function updateFocusVisuals() {
+        container.querySelectorAll(".anim-group-card.focused, .anim-channel-row.focused").forEach((el) => {
+            el.classList.remove("focused");
+        });
+        if (focused_group_index < 0 || focused_group_index >= groups.length) return;
+        const cards = container.querySelectorAll(".anim-group-card");
+        const card = cards[focused_group_index];
+        if (!card) return;
+        if (focused_channel_index >= 0) {
+            const rows = card.querySelectorAll(".anim-channel-row");
+            if (rows[focused_channel_index]) rows[focused_channel_index].classList.add("focused");
+        } else {
+            card.classList.add("focused");
+        }
+    }
+
+    // ---- 原生焦点跟踪 ----
+
+    /**
+     * 通过 focusin 事件跟踪原生焦点到内部状态
+     * 当 .anim-group-card 或 .anim-channel-row 获得焦点时，更新 focused_group/channel_index
+     */
+    container.addEventListener("focusin", (e) => {
+        if (readOnly) return;
+        const card = e.target.closest(".anim-group-card");
+        if (!card) return;
+
+        const group_idx = getGroupIndex(card);
+        if (group_idx < 0) return;
+
+        // 检查是否聚焦在通道行上
+        const chan_row = e.target.closest(".anim-channel-row");
+        if (chan_row && card.contains(chan_row)) {
+            const chan_rows = Array.from(card.querySelectorAll(".anim-channel-row"));
+            const ch_idx = chan_rows.indexOf(chan_row);
+            focused_group_index = group_idx;
+            focused_channel_index = ch_idx >= 0 ? ch_idx : -1;
+        } else {
+            focused_group_index = group_idx;
+            focused_channel_index = -1;
+        }
+        updateFocusVisuals();
+    });
+
+    // 点击组卡片/通道行时自动聚焦（浏览器原生行为，jsdom 需要手动触发）
+    container.addEventListener("click", (e) => {
+        if (readOnly) return;
+        const card = e.target.closest(".anim-group-card");
+        if (card && !e.target.closest("input, select, textarea, [contenteditable], button")) {
+            card.focus();
+        }
+    });
+
+    container.addEventListener("focusout", (e) => {
+        if (readOnly) return;
+        // 焦点离开容器时清除蓝色焦点
+        const related = e.relatedTarget;
+        if (!container.contains(related)) {
+            focused_group_index = -1;
+            focused_channel_index = -1;
+            updateFocusVisuals();
+        }
+    });
+
+    // ---- 键盘导航（仅在容器元素获得原生焦点时响应） ----
+    container.addEventListener("keydown", (e) => {
+        if (readOnly || groups.length === 0) return;
+        // 仅在 .anim-group-card 或 .anim-channel-row 获得焦点时响应
+        const target = e.target;
+        const card = target.closest(".anim-group-card");
+        const chan_row = target.closest(".anim-channel-row");
+        if (!card && !chan_row) return;
+        // 如果焦点在 input/select 内，不拦截（让浏览器处理）
+        if (target !== card && target !== chan_row) return;
+
+        const is_ctrl = e.ctrlKey || e.metaKey;
+
+        switch (e.key) {
+            case "ArrowDown": {
+                e.preventDefault();
+                if (target.classList.contains("anim-group-card")) {
+                    // 组卡片 → 下一组卡片
+                    if (focused_group_index < groups.length - 1) {
+                        const next_card = container.querySelectorAll(".anim-group-card")[focused_group_index + 1];
+                        if (next_card) next_card.focus();
+                    }
+                }
+                break;
+            }
+
+            case "ArrowUp": {
+                e.preventDefault();
+                if (target.classList.contains("anim-group-card")) {
+                    // 组卡片 → 上一组卡片
+                    if (focused_group_index > 0) {
+                        const prev_card = container.querySelectorAll(".anim-group-card")[focused_group_index - 1];
+                        if (prev_card) prev_card.focus();
+                    }
+                } else if (target.classList.contains("anim-channel-row")) {
+                    // 通道行 → 回到组卡片
+                    const card = target.closest(".anim-group-card");
+                    if (card) card.focus();
+                }
+                break;
+            }
+
+            case "ArrowRight": {
+                e.preventDefault();
+                if (target.classList.contains("anim-group-card")) {
+                    // 组卡片 → 展开
+                    const group = groups[focused_group_index];
+                    if (group && groupCollapsedMap.get(group)) {
+                        groupCollapsedMap.set(group, false);
+                        render();
+                        // 展开后重新聚焦到卡片
+                        const card = container.querySelectorAll(".anim-group-card")[focused_group_index];
+                        if (card) card.focus();
+                    }
+                }
+                break;
+            }
+
+            case "ArrowLeft": {
+                e.preventDefault();
+                if (target.classList.contains("anim-channel-row")) {
+                    // 通道行 → 回到组卡片
+                    const card = target.closest(".anim-group-card");
+                    if (card) card.focus();
+                } else if (target.classList.contains("anim-group-card")) {
+                    // 组卡片 → 折叠
+                    const group = groups[focused_group_index];
+                    if (group && !groupCollapsedMap.get(group)) {
+                        groupCollapsedMap.set(group, true);
+                        render();
+                        const card = container.querySelectorAll(".anim-group-card")[focused_group_index];
+                        if (card) card.focus();
+                    }
+                }
+                break;
+            }
+
+            case "Enter": {
+                e.preventDefault();
+                if (target.classList.contains("anim-group-card")) {
+                    toggleGroupCollapse(focused_group_index);
+                    // 重新聚焦到卡片（render 重建了 DOM）
+                    requestAnimationFrame(() => {
+                        const card = container.querySelectorAll(".anim-group-card")[focused_group_index];
+                        if (card) card.focus();
+                    });
+                }
+                break;
+            }
+
+            case "Delete":
+            case "Backspace": {
+                if (is_ctrl) return;
+                e.preventDefault();
+                if (target.classList.contains("anim-channel-row")) {
+                    // 删除通道
+                    const group = groups[focused_group_index];
+                    if (group) {
+                        group.channels.splice(focused_channel_index, 1);
+                        focused_channel_index = -1;
+                        notifyChange();
+                        render();
+                        requestAnimationFrame(() => {
+                            const card = container.querySelectorAll(".anim-group-card")[focused_group_index];
+                            if (card) card.focus();
+                        });
+                    }
+                } else if (target.classList.contains("anim-group-card")) {
+                    // 删除组
+                    groups.splice(focused_group_index, 1);
+                    focused_group_index = Math.min(focused_group_index, groups.length - 1);
+                    notifyChange();
+                    render();
+                    if (focused_group_index >= 0) {
+                        requestAnimationFrame(() => {
+                            const card = container.querySelectorAll(".anim-group-card")[focused_group_index];
+                            if (card) card.focus();
+                        });
+                    }
+                }
+                break;
+            }
+
+            case "Escape": {
+                e.preventDefault();
+                target.blur();
+                focused_group_index = -1;
+                focused_channel_index = -1;
+                updateFocusVisuals();
+                break;
+            }
+        }
+    });
+
     // ---- 公共 API ----
 
     return {

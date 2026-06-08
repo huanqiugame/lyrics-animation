@@ -855,6 +855,21 @@
     border-top: 2px solid var(--accent) !important;
 }
 
+/* 焦点样式（原生 tabindex 聚焦） */
+.anim-group-card:focus,
+.anim-group-card.focused {
+    outline: 2px solid #1e78dc;
+    outline-offset: -1px;
+}
+
+.anim-channel-row:focus,
+.anim-channel-row.focused {
+    outline: 2px solid #1e78dc;
+    outline-offset: -1px;
+    background: rgba(30, 120, 220, 0.08);
+    border-radius: 3px;
+}
+
 .anim-group-card.drag-over {
     border-top: 2px solid var(--accent) !important;
     border-radius: 0;
