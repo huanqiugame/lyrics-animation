@@ -38,6 +38,15 @@ const defaultStates = {
     word: { editingEnabled: false },
 };
 
+// 作用域过滤器状态
+const SCOPE_FILTERS = [
+    ["all", "全部"],
+    ["standard", "标准"],
+    ["duet", "对唱"],
+    ["background", "背景"],
+];
+let line_scope_filter = "all";
+
 // DOM 元素引用 (填充于 init 阶段)
 const els = {};
 
@@ -108,8 +117,16 @@ export function initParamPanel(container) {
         if (selected_line) {
             selected_line.anim_groups = groups;
             if (project) bus.emit("lyrics:modified", project);
-        } else {
-            if (config) config.line_anim_groups = groups;
+        } else if (config) {
+            if (line_scope_filter === "all") {
+                config.line_anim_groups = groups;
+            } else {
+                // 过滤模式：保留不匹配的组，替换匹配的组
+                const others = config.line_anim_groups.filter(
+                    (g) => (g.scope || "all") !== line_scope_filter,
+                );
+                config.line_anim_groups = [...others, ...groups];
+            }
             emitConfigChanged();
         }
     });
@@ -132,6 +149,24 @@ export function initParamPanel(container) {
         makeCollapseButtons(line_editor),
     );
 
+    // ---- 作用域过滤器按钮组 ----
+    const scope_filter_bar = h("div", { className: "scope-filter-bar" });
+    for (const [val, label] of SCOPE_FILTERS) {
+        const btn = h("button", {
+            className: "scope-filter-btn" + (val === line_scope_filter ? " active" : ""),
+            type: "button",
+            "data-scope": val,
+        }, label);
+        btn.addEventListener("click", () => {
+            line_scope_filter = val;
+            scope_filter_bar.querySelectorAll(".scope-filter-btn").forEach((b) => {
+                b.classList.toggle("active", b.dataset.scope === val);
+            });
+            updateEditorMode();
+        });
+        scope_filter_bar.appendChild(btn);
+    }
+
     // ---- 默认行动画组区块（只读、折叠） ----
     const line_default_section = createDefaultSection(defaultStates.line);
     const line_default_editor = createAnimEditor(line_default_section.body);
@@ -148,6 +183,7 @@ export function initParamPanel(container) {
 
     const line_anim_section = h("div", { className: "param-section" },
         line_title,
+        scope_filter_bar,
         line_editor_box,
         line_default_section.title,
         line_default_section.body,
@@ -206,6 +242,7 @@ export function initParamPanel(container) {
     els.wordTitle = word_title_text;
     els.lineDefaultSection = line_default_section;
     els.wordDefaultSection = word_default_section;
+    els.scopeFilterBar = scope_filter_bar;
 
     // ========== 事件绑定 ==========
     bus.on("lyrics:loaded", (p) => {
@@ -262,9 +299,15 @@ function updateEditorMode() {
     if (selected_line) {
         els.lineEditor.load(selected_line.anim_groups || []);
         els.lineTitle.textContent = `行动画组 [${selected_line.id}]`;
+        els.scopeFilterBar.style.display = "none";
     } else {
-        els.lineEditor.load(config ? config.line_anim_groups : []);
+        const all_groups = config ? config.line_anim_groups : [];
+        const filtered = line_scope_filter === "all"
+            ? all_groups
+            : all_groups.filter((g) => (g.scope || "all") === line_scope_filter);
+        els.lineEditor.load(filtered);
         els.lineTitle.textContent = "全局行动画组";
+        els.scopeFilterBar.style.display = "";
     }
 
     if (selected_word) {

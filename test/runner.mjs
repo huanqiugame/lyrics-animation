@@ -23,6 +23,7 @@ const tests = [
     "step-config-io.mjs",
     "step-playback-highlight.mjs",
     "step-focus-keyboard.mjs",
+    "step-scope-filter.mjs",
 ];
 
 let total_assert_passed = 0;

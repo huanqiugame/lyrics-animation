@@ -164,6 +164,7 @@ export function createEmptyProject() {
 
 /**
  * @typedef {object} AnimationGroup
+ * @property {string} scope - 作用域: "all" | "standard" | "duet" | "background"
  * @property {TimeAnchor} start - 动画开始时间锚点
  * @property {TimeAnchor} end - 动画结束时间锚点
  * @property {AnimChannel[]} channels - 动画通道列表

@@ -158,7 +158,23 @@ export function createAnimEditor(container) {
             showAnnotationModal(group, () => { notifyChange(); render(); });
         });
 
-        const header_children = [group_handle, collapse_group_btn, title_el, annot_icon];
+        // 作用域选择器
+        const scope_select = h("select", { className: "anim-group-scope" });
+        for (const [val, label] of [["all", "所有"], ["standard", "标准"], ["duet", "对唱"], ["background", "背景"]]) {
+            const opt = h("option", { value: val }, label);
+            scope_select.appendChild(opt);
+        }
+        scope_select.value = group.scope || "all";
+        if (readOnly || lockStructure) {
+            scope_select.disabled = true;
+        } else {
+            scope_select.addEventListener("change", () => {
+                group.scope = scope_select.value;
+                notifyChange();
+            });
+        }
+
+        const header_children = [group_handle, collapse_group_btn, title_el, scope_select, annot_icon];
         if (!readOnly && !lockStructure) {
             const del_btn = h("button", { className: "btn-icon btn-remove-group", type: "button", title: "删除该组" }, "×");
             del_btn.addEventListener("click", () => {
@@ -1147,6 +1163,7 @@ function createEmptyGroup() {
     return {
         name: "",
         note: "",
+        scope: "all",
         start: { ref: "wordStart", dir: "before", offset: 200 },
         end: { ref: "wordStart", dir: "after", offset: 0 },
         channels: [],

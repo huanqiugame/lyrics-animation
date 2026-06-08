@@ -71,6 +71,21 @@ function computeGroupTimeWindow(group, word, line) {
 }
 
 /**
+ * 检查动画组的 scope 是否匹配当前行
+ * @param {import('../ttml/types.js').AnimationGroup} group
+ * @param {import('../ttml/types.js').LyricLine} line
+ * @returns {boolean}
+ */
+function matchesScope(group, line) {
+    const scope = group.scope || "all";
+    if (scope === "all") return true;
+    if (scope === "standard") return !line.is_duet && !line.is_background;
+    if (scope === "duet") return !!line.is_duet;
+    if (scope === "background") return !!line.is_background;
+    return true;
+}
+
+/**
  * 评估单个动画组
  * @param {import('../ttml/types.js').AnimationGroup} group - 动画组
  * @param {number} t - 当前时间（毫秒）
@@ -80,6 +95,11 @@ function computeGroupTimeWindow(group, word, line) {
  */
 export function evaluateGroup(group, t, word, line) {
     const result = new Map();
+
+    // scope 不匹配则跳过
+    if (!matchesScope(group, line)) {
+        return result;
+    }
     const window = computeGroupTimeWindow(group, word, line);
 
     // 超出时间窗口，返回空

@@ -21,9 +21,10 @@ export function initLyricList(container) {
 
     /** 当前播放位置（毫秒），用于高亮正在唱的行/字 */
     let current_time = 0;
-    /** 当前正在播放的行 ID 和字索引 */
-    let playing_line_id = null;
-    let playing_word_index = -1;
+    /** 当前正在播放的行 ID 集合（支持多行同时高亮） */
+    let playing_line_ids = new Set();
+    /** 当前正在播放的字：Map<lineId, wordIndex> */
+    let playing_words = new Map();
 
     /**
      * 渲染所有歌词行
@@ -50,7 +51,7 @@ export function initLyricList(container) {
      */
     function renderLine(line) {
         const is_selected = line.id === selected_line_id;
-        const is_playing = line.id === playing_line_id;
+        const is_playing = playing_line_ids.has(line.id);
 
         // 时间范围
         const time_str = `${msToTimestamp(line.start_time, { ms: false })} → ${msToTimestamp(line.end_time, { ms: false })}`;
@@ -60,7 +61,7 @@ export function initLyricList(container) {
             .map((w, wi) => {
                 const has_style = w.style && (w.style.scale || w.style.color || w.style.bold);
                 const is_word_selected = is_selected && wi === selected_word_index;
-                const is_word_playing = is_playing && wi === playing_word_index;
+                const is_word_playing = is_playing && wi === playing_words.get(line.id);
                 let word_class = "word-tag";
                 if (has_style) word_class += " styled";
                 if (is_word_selected) word_class += " word-selected";
@@ -191,70 +192,85 @@ export function initLyricList(container) {
     // ---- 播放高亮 ----
 
     /**
-     * 根据当前播放时间更新高亮状态（增量更新，避免全量 re-render）
+     * 根据当前播放时间更新高亮状态（支持多行同时高亮，增量更新 DOM class）
      */
     function updatePlayingHighlight(time) {
         if (!project || project.lyrics.length === 0) return;
 
-        let new_line_id = null;
-        let new_word_index = -1;
+        // 收集当前时间点所有正在播放的行和字
+        const new_line_ids = new Set();
+        const new_words = new Map();
 
-        // 找到当前时间所在的行和字
         for (const line of project.lyrics) {
             if (time >= line.start_time && time < line.end_time) {
-                new_line_id = line.id;
+                new_line_ids.add(line.id);
                 for (let wi = 0; wi < line.words.length; wi++) {
                     const w = line.words[wi];
                     if (time >= w.start_time && time < w.end_time) {
-                        new_word_index = wi;
+                        new_words.set(line.id, wi);
                         break;
                     }
                 }
-                break;
             }
         }
 
-        // 行变化时：移除旧行的 playing class，添加新行的
-        if (new_line_id !== playing_line_id) {
-            if (playing_line_id) {
-                const prev = container.querySelector(`.lyric-row[data-line-id="${playing_line_id}"].playing`);
-                if (prev) prev.classList.remove("playing");
+        // 快速检查：行和字都没变化则跳过
+        if (setsEqual(playing_line_ids, new_line_ids) && mapsEqual(playing_words, new_words)) {
+            return;
+        }
+
+        // 移除不再播放的行
+        for (const id of playing_line_ids) {
+            if (!new_line_ids.has(id)) {
+                const el = container.querySelector(`.lyric-row[data-line-id="${id}"].playing`);
+                if (el) el.classList.remove("playing");
             }
-            if (new_line_id) {
-                const next = container.querySelector(`.lyric-row[data-line-id="${new_line_id}"]`);
-                if (next) next.classList.add("playing");
+        }
+        // 添加新播放的行
+        for (const id of new_line_ids) {
+            if (!playing_line_ids.has(id)) {
+                const el = container.querySelector(`.lyric-row[data-line-id="${id}"]`);
+                if (el) el.classList.add("playing");
             }
         }
 
-        // 字变化时：移除旧字的 word-playing class，添加新字的
-        if (new_line_id === playing_line_id && new_word_index === playing_word_index) {
-            return; // 无变化
+        // 移除不再播放的字
+        for (const [lid, wi] of playing_words) {
+            if (new_words.get(lid) !== wi) {
+                const row = container.querySelector(`.lyric-row[data-line-id="${lid}"]`);
+                if (row) {
+                    const words = row.querySelectorAll(".word-tag");
+                    if (words[wi]) words[wi].classList.remove("word-playing");
+                }
+            }
         }
-
-        // 移除旧字高亮
-        if (playing_line_id && playing_word_index >= 0) {
-            const prev_row = container.querySelector(`.lyric-row[data-line-id="${playing_line_id}"]`);
-            if (prev_row) {
-                const prev_words = prev_row.querySelectorAll(".word-tag");
-                if (prev_words[playing_word_index]) {
-                    prev_words[playing_word_index].classList.remove("word-playing");
+        // 添加新播放的字
+        for (const [lid, wi] of new_words) {
+            if (playing_words.get(lid) !== wi) {
+                const row = container.querySelector(`.lyric-row[data-line-id="${lid}"]`);
+                if (row) {
+                    const words = row.querySelectorAll(".word-tag");
+                    if (words[wi]) words[wi].classList.add("word-playing");
                 }
             }
         }
 
-        // 添加新字高亮
-        if (new_line_id && new_word_index >= 0) {
-            const next_row = container.querySelector(`.lyric-row[data-line-id="${new_line_id}"]`);
-            if (next_row) {
-                const next_words = next_row.querySelectorAll(".word-tag");
-                if (next_words[new_word_index]) {
-                    next_words[new_word_index].classList.add("word-playing");
-                }
-            }
-        }
+        playing_line_ids = new_line_ids;
+        playing_words = new_words;
+    }
 
-        playing_line_id = new_line_id;
-        playing_word_index = new_word_index;
+    /** 比较两个 Set 是否内容相同 */
+    function setsEqual(a, b) {
+        if (a.size !== b.size) return false;
+        for (const v of a) if (!b.has(v)) return false;
+        return true;
+    }
+
+    /** 比较两个 Map 是否内容相同 */
+    function mapsEqual(a, b) {
+        if (a.size !== b.size) return false;
+        for (const [k, v] of a) if (b.get(k) !== v) return false;
+        return true;
     }
 
     // ---- 事件监听 ----
@@ -262,8 +278,8 @@ export function initLyricList(container) {
         project = proj;
         selected_line_id = null;
         selected_word_index = -1;
-        playing_line_id = null;
-        playing_word_index = -1;
+        playing_line_ids = new Set();
+        playing_words = new Map();
         current_time = 0;
         render();
     });

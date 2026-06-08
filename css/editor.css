@@ -510,6 +510,34 @@
     cursor: pointer;
 }
 
+/* 作用域过滤器 */
+.scope-filter-bar {
+    display: flex;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+.scope-filter-btn {
+    font-size: 0.75em;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.scope-filter-btn:hover {
+    background: var(--hover-bg);
+}
+
+.scope-filter-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
 .param-section-body {
     padding: 5px 8px;
     display: flex;
@@ -629,6 +657,22 @@
     border-color: var(--accent);
     background: rgba(24, 160, 88, 0.08);
     outline: none;
+}
+
+.anim-group-scope {
+    font-size: 0.75em;
+    padding: 1px 4px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.anim-group-scope:disabled {
+    opacity: 0.5;
+    cursor: default;
 }
 
 .anim-group-body {
