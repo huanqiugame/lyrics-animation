@@ -599,7 +599,7 @@ export function createAnimEditor(container) {
     }
 
     /**
-     * 渲染后恢复焦点状态
+     * 渲染后恢复焦点状态，并将焦点移回容器
      */
     function restoreFocus() {
         if (focused_group_index >= 0 && focused_group_index < groups.length) {
@@ -609,6 +609,8 @@ export function createAnimEditor(container) {
                 focused_channel_index = -1; // 通道已不存在，回退到组级别
             }
             updateFocusVisuals();
+            // 将浏览器焦点移回容器，确保后续键盘事件的 e.target 在容器内
+            if (container.focus) container.focus();
         }
     }
 
@@ -625,55 +627,77 @@ export function createAnimEditor(container) {
     }
 
     /**
-     * 检查元素是否在输入框内
+     * 检查事件目标是否在此编辑器容器内（兼容 jsdom）
      */
-    function isInputFocused() {
-        const tag = document.activeElement?.tagName;
-        return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" ||
-            document.activeElement?.isContentEditable;
+    function isActiveInContainer(e) {
+        const target = e?.target;
+        if (target && container.contains(target)) return true;
+        return container.contains(document.activeElement);
     }
 
-    // ---- 键盘导航 ----
-    container.addEventListener("keydown", (e) => {
+    /**
+     * 检查活动元素是否在此编辑器容器的输入框内
+     */
+    function isInputFocused() {
+        const el = document.activeElement;
+        if (!el || !container.contains(el)) return false;
+        const tag = el.tagName;
+        return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" ||
+            el.isContentEditable;
+    }
+
+    // 使容器可聚焦（render 后恢复焦点用）
+    container.setAttribute("tabindex", "-1");
+    container.style.outline = "none";
+
+    // ---- 键盘导航（document 级别监听，仅在焦点位于此编辑器容器内时响应） ----
+    document.addEventListener("keydown", (e) => {
         if (readOnly || groups.length === 0) return;
-        // 输入框内的按键不拦截（除了 Escape）
-        if (isInputFocused() && e.key !== "Escape") return;
+        if (!isActiveInContainer(e)) return;
 
         const is_ctrl = e.ctrlKey || e.metaKey;
 
-        switch (e.key) {
-            case "Tab": {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    // Shift+Tab: 上一个组
-                    if (focused_group_index <= 0) {
-                        setFocus(groups.length - 1);
-                    } else {
-                        setFocus(focused_group_index - 1);
-                    }
-                } else {
-                    // Tab: 下一个组
-                    if (focused_group_index < 0 || focused_group_index >= groups.length - 1) {
-                        setFocus(0);
-                    } else {
-                        setFocus(focused_group_index + 1);
-                    }
+        // Tab 键：input 内按 Tab → 转移到组卡片；组卡片上按 Tab → 切换组
+        if (e.key === "Tab") {
+            e.preventDefault();
+            const target = e.target;
+            const is_input = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" ||
+                target.tagName === "SELECT" || target.isContentEditable);
+            if (is_input || isInputFocused()) {
+                // input 内 → 蓝色焦点到当前组卡片
+                if (document.activeElement && document.activeElement.blur) {
+                    document.activeElement.blur();
                 }
-                break;
+                if (focused_group_index < 0) setFocus(0);
+                else updateFocusVisuals();
+            } else {
+                // 组卡片上 → 切换组
+                if (e.shiftKey) {
+                    setFocus(focused_group_index <= 0 ? groups.length - 1 : focused_group_index - 1);
+                } else {
+                    setFocus(focused_group_index < 0 || focused_group_index >= groups.length - 1 ? 0 : focused_group_index + 1);
+                }
             }
+            return;
+        }
 
+        // 以下按键仅在蓝色焦点（组卡片/通道行）激活时处理
+        const tgt = e.target;
+        const tgt_is_input = tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" ||
+            tgt.tagName === "SELECT" || tgt.isContentEditable);
+        if (tgt_is_input || isInputFocused()) return;
+
+        switch (e.key) {
             case "ArrowDown": {
                 e.preventDefault();
                 if (focused_group_index < 0) {
                     setFocus(0);
                 } else if (focused_channel_index >= 0) {
-                    // 在通道内：下一个通道
                     const group = groups[focused_group_index];
                     if (focused_channel_index < group.channels.length - 1) {
                         setFocus(focused_group_index, focused_channel_index + 1);
                     }
                 } else {
-                    // 在组级别：如果组已展开且有通道，进入第一个通道
                     const group = groups[focused_group_index];
                     const card = container.querySelectorAll(".anim-group-card")[focused_group_index];
                     if (card && !card.classList.contains("collapsed") && group.channels.length > 0) {
@@ -688,13 +712,10 @@ export function createAnimEditor(container) {
                 if (focused_group_index < 0) {
                     setFocus(groups.length - 1);
                 } else if (focused_channel_index > 0) {
-                    // 在通道内：上一个通道
                     setFocus(focused_group_index, focused_channel_index - 1);
                 } else if (focused_channel_index === 0) {
-                    // 在第一个通道：回到组级别
                     setFocus(focused_group_index, -1);
                 } else {
-                    // 在组级别：上一个组
                     if (focused_group_index > 0) {
                         setFocus(focused_group_index - 1);
                     }
@@ -707,7 +728,6 @@ export function createAnimEditor(container) {
                 if (focused_group_index < 0) {
                     setFocus(0);
                 } else if (focused_channel_index >= 0) {
-                    // 在通道内：如果通道折叠，展开它
                     const group = groups[focused_group_index];
                     const ch = group.channels[focused_channel_index];
                     if (channelCollapsedMap.get(ch)) {
@@ -715,7 +735,6 @@ export function createAnimEditor(container) {
                         render();
                     }
                 } else {
-                    // 在组级别：如果组折叠，展开它
                     const group = groups[focused_group_index];
                     if (groupCollapsedMap.get(group)) {
                         groupCollapsedMap.set(group, false);
@@ -728,7 +747,6 @@ export function createAnimEditor(container) {
             case "ArrowLeft": {
                 e.preventDefault();
                 if (focused_channel_index >= 0) {
-                    // 在通道内：如果通道展开，折叠它；如果已折叠，回到组级别
                     const group = groups[focused_group_index];
                     const ch = group.channels[focused_channel_index];
                     if (channelCollapsedMap.get(ch)) {
@@ -738,7 +756,6 @@ export function createAnimEditor(container) {
                         render();
                     }
                 } else if (focused_group_index >= 0) {
-                    // 在组级别：如果组展开，折叠它
                     const group = groups[focused_group_index];
                     if (!groupCollapsedMap.get(group)) {
                         groupCollapsedMap.set(group, true);
@@ -758,17 +775,15 @@ export function createAnimEditor(container) {
 
             case "Delete":
             case "Backspace": {
-                if (is_ctrl) return; // Ctrl+Delete 不拦截，留给复制粘贴模块
+                if (is_ctrl) return;
                 e.preventDefault();
                 if (focused_channel_index >= 0) {
-                    // 删除焦点通道
                     const group = groups[focused_group_index];
                     group.channels.splice(focused_channel_index, 1);
                     focused_channel_index = -1;
                     notifyChange();
                     render();
                 } else if (focused_group_index >= 0) {
-                    // 删除焦点组
                     groups.splice(focused_group_index, 1);
                     focused_group_index = Math.min(focused_group_index, groups.length - 1);
                     notifyChange();
@@ -782,7 +797,7 @@ export function createAnimEditor(container) {
                 break;
             }
         }
-    });
+    }, true); // 使用捕获阶段，优先于 input 的默认行为
 
     // 点击组卡片时更新焦点
     container.addEventListener("click", (e) => {
