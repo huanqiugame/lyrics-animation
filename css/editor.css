@@ -860,6 +860,19 @@
     border-radius: 0;
 }
 
+/* 焦点样式 */
+.anim-group-card.focused {
+    outline: 2px solid #1e78dc;
+    outline-offset: -1px;
+}
+
+.anim-channel-row.focused {
+    outline: 2px solid #1e78dc;
+    outline-offset: -1px;
+    background: rgba(30, 120, 220, 0.08);
+    border-radius: 3px;
+}
+
 .anim-channel-row.drag-over {
     border-top: 2px solid var(--accent) !important;
 }

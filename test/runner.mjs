@@ -22,6 +22,7 @@ const tests = [
     "step-drag-reorder.mjs",
     "step-config-io.mjs",
     "step-playback-highlight.mjs",
+    "step-focus-keyboard.mjs",
 ];
 
 let total_assert_passed = 0;

@@ -58,6 +58,10 @@ export function createAnimEditor(container) {
     let readOnly = false;
     let lockStructure = false;
 
+    // 焦点管理状态
+    let focused_group_index = -1;
+    let focused_channel_index = -1; // -1 表示焦点在组级别
+
     // 预生成通道选项列表
     const channel_options = buildChannelOptions();
     const easing_options = buildEasingOptions();
@@ -89,6 +93,7 @@ export function createAnimEditor(container) {
         }
 
         container.scrollTop = scroll_top;
+        restoreFocus();
     }
 
     // ---- 构建单个动画组卡片 ----
@@ -538,6 +543,267 @@ export function createAnimEditor(container) {
             render();
         });
     }
+    // ---- 焦点管理 ----
+
+    /**
+     * 设置焦点到指定组/通道
+     * @param {number} group_idx
+     * @param {number} [channel_idx=-1] -1 表示组级别
+     */
+    function setFocus(group_idx, channel_idx = -1) {
+        focused_group_index = group_idx;
+        focused_channel_index = channel_idx;
+        updateFocusVisuals();
+    }
+
+    /**
+     * 清除所有焦点
+     */
+    function clearFocus() {
+        focused_group_index = -1;
+        focused_channel_index = -1;
+        updateFocusVisuals();
+    }
+
+    /**
+     * 更新 DOM 焦点样式（增量更新，不 re-render）
+     */
+    function updateFocusVisuals() {
+        // 清除旧焦点
+        container.querySelectorAll(".anim-group-card.focused, .anim-channel-row.focused").forEach((el) => {
+            el.classList.remove("focused");
+        });
+
+        if (focused_group_index < 0 || focused_group_index >= groups.length) return;
+
+        const cards = container.querySelectorAll(".anim-group-card");
+        const card = cards[focused_group_index];
+        if (!card) return;
+
+        if (focused_channel_index >= 0) {
+            // 焦点在通道上
+            const rows = card.querySelectorAll(".anim-channel-row");
+            if (rows[focused_channel_index]) {
+                rows[focused_channel_index].classList.add("focused");
+                if (rows[focused_channel_index].scrollIntoView) {
+                    rows[focused_channel_index].scrollIntoView({ block: "nearest" });
+                }
+            }
+        } else {
+            // 焦点在组上
+            card.classList.add("focused");
+            if (card.scrollIntoView) {
+                card.scrollIntoView({ block: "nearest" });
+            }
+        }
+    }
+
+    /**
+     * 渲染后恢复焦点状态
+     */
+    function restoreFocus() {
+        if (focused_group_index >= 0 && focused_group_index < groups.length) {
+            // 验证通道索引是否仍然有效
+            const group = groups[focused_group_index];
+            if (focused_channel_index >= 0 && focused_channel_index >= group.channels.length) {
+                focused_channel_index = -1; // 通道已不存在，回退到组级别
+            }
+            updateFocusVisuals();
+        }
+    }
+
+    /**
+     * 切换组的折叠状态
+     * @param {number} group_idx
+     */
+    function toggleGroupCollapse(group_idx) {
+        if (group_idx < 0 || group_idx >= groups.length) return;
+        const group = groups[group_idx];
+        const was_collapsed = groupCollapsedMap.get(group);
+        groupCollapsedMap.set(group, !was_collapsed);
+        render();
+    }
+
+    /**
+     * 检查元素是否在输入框内
+     */
+    function isInputFocused() {
+        const tag = document.activeElement?.tagName;
+        return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" ||
+            document.activeElement?.isContentEditable;
+    }
+
+    // ---- 键盘导航 ----
+    container.addEventListener("keydown", (e) => {
+        if (readOnly || groups.length === 0) return;
+        // 输入框内的按键不拦截（除了 Escape）
+        if (isInputFocused() && e.key !== "Escape") return;
+
+        const is_ctrl = e.ctrlKey || e.metaKey;
+
+        switch (e.key) {
+            case "Tab": {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    // Shift+Tab: 上一个组
+                    if (focused_group_index <= 0) {
+                        setFocus(groups.length - 1);
+                    } else {
+                        setFocus(focused_group_index - 1);
+                    }
+                } else {
+                    // Tab: 下一个组
+                    if (focused_group_index < 0 || focused_group_index >= groups.length - 1) {
+                        setFocus(0);
+                    } else {
+                        setFocus(focused_group_index + 1);
+                    }
+                }
+                break;
+            }
+
+            case "ArrowDown": {
+                e.preventDefault();
+                if (focused_group_index < 0) {
+                    setFocus(0);
+                } else if (focused_channel_index >= 0) {
+                    // 在通道内：下一个通道
+                    const group = groups[focused_group_index];
+                    if (focused_channel_index < group.channels.length - 1) {
+                        setFocus(focused_group_index, focused_channel_index + 1);
+                    }
+                } else {
+                    // 在组级别：如果组已展开且有通道，进入第一个通道
+                    const group = groups[focused_group_index];
+                    const card = container.querySelectorAll(".anim-group-card")[focused_group_index];
+                    if (card && !card.classList.contains("collapsed") && group.channels.length > 0) {
+                        setFocus(focused_group_index, 0);
+                    }
+                }
+                break;
+            }
+
+            case "ArrowUp": {
+                e.preventDefault();
+                if (focused_group_index < 0) {
+                    setFocus(groups.length - 1);
+                } else if (focused_channel_index > 0) {
+                    // 在通道内：上一个通道
+                    setFocus(focused_group_index, focused_channel_index - 1);
+                } else if (focused_channel_index === 0) {
+                    // 在第一个通道：回到组级别
+                    setFocus(focused_group_index, -1);
+                } else {
+                    // 在组级别：上一个组
+                    if (focused_group_index > 0) {
+                        setFocus(focused_group_index - 1);
+                    }
+                }
+                break;
+            }
+
+            case "ArrowRight": {
+                e.preventDefault();
+                if (focused_group_index < 0) {
+                    setFocus(0);
+                } else if (focused_channel_index >= 0) {
+                    // 在通道内：如果通道折叠，展开它
+                    const group = groups[focused_group_index];
+                    const ch = group.channels[focused_channel_index];
+                    if (channelCollapsedMap.get(ch)) {
+                        channelCollapsedMap.set(ch, false);
+                        render();
+                    }
+                } else {
+                    // 在组级别：如果组折叠，展开它
+                    const group = groups[focused_group_index];
+                    if (groupCollapsedMap.get(group)) {
+                        groupCollapsedMap.set(group, false);
+                        render();
+                    }
+                }
+                break;
+            }
+
+            case "ArrowLeft": {
+                e.preventDefault();
+                if (focused_channel_index >= 0) {
+                    // 在通道内：如果通道展开，折叠它；如果已折叠，回到组级别
+                    const group = groups[focused_group_index];
+                    const ch = group.channels[focused_channel_index];
+                    if (channelCollapsedMap.get(ch)) {
+                        setFocus(focused_group_index, -1);
+                    } else {
+                        channelCollapsedMap.set(ch, true);
+                        render();
+                    }
+                } else if (focused_group_index >= 0) {
+                    // 在组级别：如果组展开，折叠它
+                    const group = groups[focused_group_index];
+                    if (!groupCollapsedMap.get(group)) {
+                        groupCollapsedMap.set(group, true);
+                        render();
+                    }
+                }
+                break;
+            }
+
+            case "Enter": {
+                e.preventDefault();
+                if (focused_group_index >= 0) {
+                    toggleGroupCollapse(focused_group_index);
+                }
+                break;
+            }
+
+            case "Delete":
+            case "Backspace": {
+                if (is_ctrl) return; // Ctrl+Delete 不拦截，留给复制粘贴模块
+                e.preventDefault();
+                if (focused_channel_index >= 0) {
+                    // 删除焦点通道
+                    const group = groups[focused_group_index];
+                    group.channels.splice(focused_channel_index, 1);
+                    focused_channel_index = -1;
+                    notifyChange();
+                    render();
+                } else if (focused_group_index >= 0) {
+                    // 删除焦点组
+                    groups.splice(focused_group_index, 1);
+                    focused_group_index = Math.min(focused_group_index, groups.length - 1);
+                    notifyChange();
+                    render();
+                }
+                break;
+            }
+
+            case "Escape": {
+                clearFocus();
+                break;
+            }
+        }
+    });
+
+    // 点击组卡片时更新焦点
+    container.addEventListener("click", (e) => {
+        if (readOnly) return;
+        const card = e.target.closest(".anim-group-card");
+        if (!card) return;
+        const cards = Array.from(container.querySelectorAll(".anim-group-card"));
+        const idx = cards.indexOf(card);
+        if (idx >= 0) {
+            // 检查是否点击在通道行上
+            const chan_row = e.target.closest(".anim-channel-row");
+            if (chan_row) {
+                const chan_rows = Array.from(card.querySelectorAll(".anim-channel-row"));
+                const ci = chan_rows.indexOf(chan_row);
+                setFocus(idx, ci);
+            } else {
+                setFocus(idx);
+            }
+        }
+    });
+
     // ---- 公共 API ----
 
     return {
