@@ -93,8 +93,8 @@ check(cards1[1].getAttribute("tabindex") === "0", "组卡片有 tabindex=0");
 const ch_rows1 = cards1[0].querySelectorAll(".anim-channel-row");
 check(ch_rows1[0].getAttribute("tabindex") === "0", "通道行有 tabindex=0");
 
-// ==================== 测试 2: 方向键组间导航 ====================
-section("2. ArrowDown/Up 组间导航");
+// ==================== 测试 2: ArrowDown/Up 组间+通道间导航 ====================
+section("2. ArrowDown/Up 组间+通道间导航");
 
 const { container: c2 } = createEditor();
 
@@ -103,31 +103,38 @@ const card0 = c2.querySelectorAll(".anim-group-card")[0];
 card0.focus();
 check(focusedGroup(c2) === 0, "聚焦组 0");
 
-// ArrowDown → 组 1
+// ArrowDown from group card → 进入第一个通道（组 0 有通道）
 press(card0, "ArrowDown");
-check(focusedGroup(c2) === 1, "ArrowDown: 组 0 → 组 1");
+const ch_rows_2 = c2.querySelectorAll(".anim-group-card")[0].querySelectorAll(".anim-channel-row");
+check(ch_rows_2[0].classList.contains("focused"), "ArrowDown: 组卡片 → 第一个通道");
 
-// ArrowDown → 组 2
+// ArrowDown from channel → 下一个通道
+press(ch_rows_2[0], "ArrowDown");
+check(ch_rows_2[1].classList.contains("focused"), "ArrowDown: 通道 0 → 通道 1");
+
+// ArrowDown from last channel → 下一组卡片
+press(ch_rows_2[1], "ArrowDown");
+check(focusedGroup(c2) === 1, "ArrowDown: 最后通道 → 下一组卡片");
+
+// ArrowDown from group 1 card → 进入通道
 const card1 = c2.querySelectorAll(".anim-group-card")[1];
 press(card1, "ArrowDown");
-check(focusedGroup(c2) === 2, "ArrowDown: 组 1 → 组 2");
+const ch_rows_2b = c2.querySelectorAll(".anim-group-card")[1].querySelectorAll(".anim-channel-row");
+check(ch_rows_2b[0].classList.contains("focused"), "ArrowDown: 组 1 → 通道");
 
-// ArrowDown → 不移动
+// ArrowDown from last channel of group 1 → 组 2
+press(ch_rows_2b[0], "ArrowDown");
+check(focusedGroup(c2) === 2, "ArrowDown: 组 1 通道 → 组 2");
+
+// ArrowUp from group 2 card → 组 1 的通道区域
 const card2 = c2.querySelectorAll(".anim-group-card")[2];
-press(card2, "ArrowDown");
-check(focusedGroup(c2) === 2, "ArrowDown: 已在最后一组不移动");
-
-// ArrowUp → 组 1
 press(card2, "ArrowUp");
+// 组 2 没有通道，ArrowUp 从组卡片到上一组卡片
 check(focusedGroup(c2) === 1, "ArrowUp: 组 2 → 组 1");
 
-// ArrowUp → 组 0
+// ArrowUp from group card → 上一组
 press(c2.querySelectorAll(".anim-group-card")[1], "ArrowUp");
 check(focusedGroup(c2) === 0, "ArrowUp: 组 1 → 组 0");
-
-// ArrowUp → 不移动
-press(c2.querySelectorAll(".anim-group-card")[0], "ArrowUp");
-check(focusedGroup(c2) === 0, "ArrowUp: 已在第一组不移动");
 
 // ==================== 测试 3: Enter 折叠/展开 ====================
 section("3. Enter 折叠/展开组");
