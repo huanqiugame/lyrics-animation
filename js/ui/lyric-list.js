@@ -19,6 +19,12 @@ export function initLyricList(container) {
     /** @type {number} */
     let selected_word_index = -1;
 
+    /** 当前播放位置（毫秒），用于高亮正在唱的行/字 */
+    let current_time = 0;
+    /** 当前正在播放的行 ID 和字索引 */
+    let playing_line_id = null;
+    let playing_word_index = -1;
+
     /**
      * 渲染所有歌词行
      */
@@ -44,6 +50,7 @@ export function initLyricList(container) {
      */
     function renderLine(line) {
         const is_selected = line.id === selected_line_id;
+        const is_playing = line.id === playing_line_id;
 
         // 时间范围
         const time_str = `${msToTimestamp(line.start_time, { ms: false })} → ${msToTimestamp(line.end_time, { ms: false })}`;
@@ -53,9 +60,11 @@ export function initLyricList(container) {
             .map((w, wi) => {
                 const has_style = w.style && (w.style.scale || w.style.color || w.style.bold);
                 const is_word_selected = is_selected && wi === selected_word_index;
+                const is_word_playing = is_playing && wi === playing_word_index;
                 let word_class = "word-tag";
                 if (has_style) word_class += " styled";
                 if (is_word_selected) word_class += " word-selected";
+                if (is_word_playing) word_class += " word-playing";
                 return `<span class="${word_class}" title="${msToTimestamp(w.start_time)} → ${msToTimestamp(w.end_time)}" data-word-index="${wi}">${esc(w.word)}</span>`;
             })
             .join("");
@@ -69,7 +78,7 @@ export function initLyricList(container) {
         if (line.style) tags.push(h("span", { className: "tag style" }, "样式"));
 
         const row = h("div", {
-            className: cls("lyric-row", is_selected && "selected"),
+            className: cls("lyric-row", is_selected && "selected", is_playing && "playing"),
             "data-line-id": line.id,
         });
 
@@ -86,6 +95,11 @@ export function initLyricList(container) {
             span.addEventListener("click", (e) => {
                 handleWordClick(e, line, wi);
             });
+            // 双击词 → 跳转到该词开始时间
+            span.addEventListener("dblclick", (e) => {
+                e.stopPropagation();
+                bus.emit("ui:seek", { time: line.words[wi].start_time });
+            });
         });
 
         const meta_el = row.querySelector(".row-meta");
@@ -95,6 +109,12 @@ export function initLyricList(container) {
         if (line.translated_lyric) {
             row.title = `翻译: ${line.translated_lyric}`;
         }
+
+        // 双击行 → 跳转到该行开始时间
+        row.addEventListener("dblclick", (e) => {
+            e.stopPropagation();
+            bus.emit("ui:seek", { time: line.start_time });
+        });
 
         row.addEventListener("click", () => {
             // 清除词汇选中状态
@@ -168,17 +188,99 @@ export function initLyricList(container) {
         bus.emit("ui:selectWord", { lineId: line.id, line, wordIndex: word_index, word });
     }
 
+    // ---- 播放高亮 ----
+
+    /**
+     * 根据当前播放时间更新高亮状态（增量更新，避免全量 re-render）
+     */
+    function updatePlayingHighlight(time) {
+        if (!project || project.lyrics.length === 0) return;
+
+        let new_line_id = null;
+        let new_word_index = -1;
+
+        // 找到当前时间所在的行和字
+        for (const line of project.lyrics) {
+            if (time >= line.start_time && time < line.end_time) {
+                new_line_id = line.id;
+                for (let wi = 0; wi < line.words.length; wi++) {
+                    const w = line.words[wi];
+                    if (time >= w.start_time && time < w.end_time) {
+                        new_word_index = wi;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        // 行变化时：移除旧行的 playing class，添加新行的
+        if (new_line_id !== playing_line_id) {
+            if (playing_line_id) {
+                const prev = container.querySelector(`.lyric-row[data-line-id="${playing_line_id}"].playing`);
+                if (prev) prev.classList.remove("playing");
+            }
+            if (new_line_id) {
+                const next = container.querySelector(`.lyric-row[data-line-id="${new_line_id}"]`);
+                if (next) next.classList.add("playing");
+            }
+        }
+
+        // 字变化时：移除旧字的 word-playing class，添加新字的
+        if (new_line_id === playing_line_id && new_word_index === playing_word_index) {
+            return; // 无变化
+        }
+
+        // 移除旧字高亮
+        if (playing_line_id && playing_word_index >= 0) {
+            const prev_row = container.querySelector(`.lyric-row[data-line-id="${playing_line_id}"]`);
+            if (prev_row) {
+                const prev_words = prev_row.querySelectorAll(".word-tag");
+                if (prev_words[playing_word_index]) {
+                    prev_words[playing_word_index].classList.remove("word-playing");
+                }
+            }
+        }
+
+        // 添加新字高亮
+        if (new_line_id && new_word_index >= 0) {
+            const next_row = container.querySelector(`.lyric-row[data-line-id="${new_line_id}"]`);
+            if (next_row) {
+                const next_words = next_row.querySelectorAll(".word-tag");
+                if (next_words[new_word_index]) {
+                    next_words[new_word_index].classList.add("word-playing");
+                }
+            }
+        }
+
+        playing_line_id = new_line_id;
+        playing_word_index = new_word_index;
+    }
+
     // ---- 事件监听 ----
     bus.on("lyrics:loaded", (proj) => {
         project = proj;
         selected_line_id = null;
         selected_word_index = -1;
+        playing_line_id = null;
+        playing_word_index = -1;
+        current_time = 0;
         render();
     });
 
     bus.on("lyrics:modified", (proj) => {
         project = proj;
         render();
+    });
+
+    bus.on("audio:timeupdate", ({ currentTime }) => {
+        current_time = currentTime;
+        updatePlayingHighlight(currentTime);
+    });
+
+    bus.on("audio:seeked", ({ currentTime }) => {
+        current_time = currentTime;
+        updatePlayingHighlight(currentTime);
     });
 }
 

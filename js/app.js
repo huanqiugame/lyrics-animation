@@ -33,6 +33,13 @@ bus.on("file:audio", ({ file }) => {
     shell.statusBar.textContent = `音频已加载: ${file.name}`;
 });
 
+// ---- 跳转请求 ----
+bus.on("ui:seek", ({ time }) => {
+    if (engine.hasAudio) {
+        engine.seek(time);
+    }
+});
+
 bus.on("audio:loaded", ({ duration }) => {
     const total_sec = (duration / 1000).toFixed(1);
     shell.statusBar.textContent = `音频就绪 — 时长 ${total_sec}s，可开始预览`;

@@ -21,6 +21,7 @@ const tests = [
     "step-priority-chain.mjs",
     "step-drag-reorder.mjs",
     "step-config-io.mjs",
+    "step-playback-highlight.mjs",
 ];
 
 let total_assert_passed = 0;

@@ -194,6 +194,8 @@
     cursor: pointer;
     transition: background 0.1s;
     border-left: 3px solid transparent;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .lyric-row:hover {
@@ -202,6 +204,16 @@
 
 .lyric-row.selected {
     background: rgba(24, 160, 88, 0.1);
+    border-left-color: var(--accent);
+}
+
+.lyric-row.playing {
+    background: rgba(30, 120, 220, 0.15);
+    border-left-color: #1e78dc;
+}
+
+.lyric-row.selected.playing {
+    background: rgba(24, 160, 88, 0.2);
     border-left-color: var(--accent);
 }
 
@@ -238,6 +250,8 @@
     margin: 0 1px;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.05);
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .word-tag.styled {
@@ -246,6 +260,16 @@
 }
 
 .word-tag.word-selected {
+    background: rgba(24, 160, 88, 0.35);
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+}
+
+.word-tag.word-playing {
+    background: rgba(30, 120, 220, 0.3);
+}
+
+.word-tag.word-selected.word-playing {
     background: rgba(24, 160, 88, 0.35);
     outline: 2px solid var(--accent);
     outline-offset: -1px;
@@ -376,6 +400,30 @@
     color: var(--text-secondary);
     white-space: nowrap;
     min-width: 160px;
+}
+
+.time-current {
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 3px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.time-current:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+}
+
+.time-jump-input {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    padding: 1px 4px;
+    outline: none;
+    width: 80px;
 }
 
 .progress-bar {
